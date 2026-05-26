@@ -9,6 +9,7 @@ package supportcase
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"ispcrm/internal/agent"
@@ -16,6 +17,14 @@ import (
 
 // ErrNotFound is returned when a requested case does not exist.
 var ErrNotFound = errors.New("case not found")
+
+// Validation errors returned by Create when a required field is missing or a
+// taxonomy value is not one of the predefined sets.
+var (
+	ErrSubjectRequired = errors.New("case subject is required")
+	ErrInvalidCategory = errors.New("invalid case category")
+	ErrInvalidPriority = errors.New("invalid case priority")
+)
 
 // Category is the kind of issue a case is about.
 type Category string
@@ -28,6 +37,16 @@ const (
 	CategoryGeneral      Category = "general"
 )
 
+// Valid reports whether c is one of the predefined case categories.
+func (c Category) Valid() bool {
+	switch c {
+	case CategoryBilling, CategoryConnectivity, CategoryHardware, CategoryTV, CategoryGeneral:
+		return true
+	default:
+		return false
+	}
+}
+
 // Priority is how urgently a case needs attention.
 type Priority string
 
@@ -37,6 +56,16 @@ const (
 	PriorityHigh   Priority = "high"
 	PriorityUrgent Priority = "urgent"
 )
+
+// Valid reports whether p is one of the predefined case priorities.
+func (p Priority) Valid() bool {
+	switch p {
+	case PriorityLow, PriorityMedium, PriorityHigh, PriorityUrgent:
+		return true
+	default:
+		return false
+	}
+}
 
 // Status is a case's position in its lifecycle (Open → In-progress → Resolved → Closed).
 type Status string
@@ -81,6 +110,8 @@ type Repository interface {
 	ListByCustomer(ctx context.Context, customerID uint) ([]Case, error)
 	// Get returns a case with its comment timeline, or ErrNotFound.
 	Get(ctx context.Context, id uint) (Case, error)
+	// Create inserts a new case, assigning its ID.
+	Create(ctx context.Context, c *Case) error
 }
 
 // Service owns support-case business logic.
@@ -101,4 +132,32 @@ func (s *Service) ListForCustomer(ctx context.Context, customerID uint) ([]Case,
 // Get returns a single case with its comment timeline, or ErrNotFound.
 func (s *Service) Get(ctx context.Context, id uint) (Case, error) {
 	return s.repo.Get(ctx, id)
+}
+
+// validate enforces the required-field and taxonomy rules for opening a case.
+func (c Case) validate() error {
+	if strings.TrimSpace(c.Subject) == "" {
+		return ErrSubjectRequired
+	}
+	if !c.Category.Valid() {
+		return ErrInvalidCategory
+	}
+	if !c.Priority.Valid() {
+		return ErrInvalidPriority
+	}
+	return nil
+}
+
+// Create opens a new case for a customer. New cases always start in the Open
+// status regardless of any status supplied by the caller.
+func (s *Service) Create(ctx context.Context, c Case) (Case, error) {
+	if err := c.validate(); err != nil {
+		return Case{}, err
+	}
+	c.ID = 0 // the repository assigns identifiers
+	c.Status = StatusOpen
+	if err := s.repo.Create(ctx, &c); err != nil {
+		return Case{}, err
+	}
+	return c, nil
 }

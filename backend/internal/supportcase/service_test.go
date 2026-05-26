@@ -8,8 +8,9 @@ import (
 
 // fakeRepo is an in-memory Repository for unit-testing the service in isolation.
 type fakeRepo struct {
-	cases []Case
-	err   error
+	cases  []Case
+	nextID uint
+	err    error
 }
 
 func (f *fakeRepo) ListByCustomer(ctx context.Context, customerID uint) ([]Case, error) {
@@ -35,6 +36,16 @@ func (f *fakeRepo) Get(ctx context.Context, id uint) (Case, error) {
 		}
 	}
 	return Case{}, ErrNotFound
+}
+
+func (f *fakeRepo) Create(ctx context.Context, c *Case) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.nextID++
+	c.ID = f.nextID
+	f.cases = append(f.cases, *c)
+	return nil
 }
 
 func TestListForCustomerReturnsThatCustomersCases(t *testing.T) {
@@ -76,6 +87,68 @@ func TestGetUnknownReturnsNotFound(t *testing.T) {
 	_, err := svc.Get(context.Background(), 999)
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("Get error = %v, want ErrNotFound", err)
+	}
+}
+
+func TestCreateOpensCaseWithStatusOpenAndAssignsID(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := NewService(repo)
+
+	got, err := svc.Create(context.Background(), Case{
+		CustomerID: 7, Subject: "No internet", Description: "Down since 8am",
+		Category: CategoryConnectivity, Priority: PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("Create returned unexpected error: %v", err)
+	}
+	if got.ID == 0 {
+		t.Errorf("Create did not assign an ID: %+v", got)
+	}
+	if got.Status != StatusOpen {
+		t.Errorf("Create status = %q, want %q", got.Status, StatusOpen)
+	}
+	if got.CustomerID != 7 || got.Subject != "No internet" {
+		t.Errorf("Create = %+v, want customer 7 subject 'No internet'", got)
+	}
+	if len(repo.cases) != 1 {
+		t.Errorf("repo holds %d cases, want 1", len(repo.cases))
+	}
+}
+
+func TestCreateRejectsMissingSubject(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := NewService(repo)
+
+	_, err := svc.Create(context.Background(), Case{
+		CustomerID: 7, Subject: "  ", Category: CategoryConnectivity, Priority: PriorityHigh,
+	})
+	if !errors.Is(err, ErrSubjectRequired) {
+		t.Fatalf("Create error = %v, want ErrSubjectRequired", err)
+	}
+	if len(repo.cases) != 0 {
+		t.Errorf("invalid case was persisted: %+v", repo.cases)
+	}
+}
+
+func TestCreateRejectsInvalidCategory(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.Create(context.Background(), Case{
+		CustomerID: 7, Subject: "Help", Category: Category("nonsense"), Priority: PriorityHigh,
+	})
+	if !errors.Is(err, ErrInvalidCategory) {
+		t.Fatalf("Create error = %v, want ErrInvalidCategory", err)
+	}
+}
+
+func TestCreateRejectsInvalidPriority(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.Create(context.Background(), Case{
+		CustomerID: 7, Subject: "Help", Category: CategoryBilling, Priority: Priority("whenever"),
+	})
+	if !errors.Is(err, ErrInvalidPriority) {
+		t.Fatalf("Create error = %v, want ErrInvalidPriority", err)
 	}
 }
 

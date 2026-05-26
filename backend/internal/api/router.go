@@ -50,6 +50,7 @@ func NewRouter(
 
 	caseH := &caseHandler{svc: cases}
 	r.GET("/customers/:id/cases", caseH.listForCustomer)
+	r.POST("/customers/:id/cases", caseH.create)
 	r.GET("/cases/:id", caseH.get)
 
 	return r

@@ -33,6 +33,11 @@ func (r *CaseRepository) ListByCustomer(ctx context.Context, customerID uint) ([
 	return cases, nil
 }
 
+// Create inserts a new case.
+func (r *CaseRepository) Create(ctx context.Context, c *supportcase.Case) error {
+	return r.db.WithContext(ctx).Create(c).Error
+}
+
 // Get returns a single case with its assigned agent and its comment timeline
 // (oldest first, each comment's author preloaded), translating GORM's not-found
 // error into the domain-level supportcase.ErrNotFound.

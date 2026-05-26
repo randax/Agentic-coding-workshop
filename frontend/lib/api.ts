@@ -142,6 +142,30 @@ export async function getCustomerCases(
   return res.json() as Promise<Case[]>;
 }
 
+/** Fields needed to open a new case. Status is always Open (server-assigned). */
+export interface CaseInput {
+  subject: string;
+  description: string;
+  category: CaseCategory;
+  priority: CasePriority;
+}
+
+/** Opens a new case for a customer. */
+export async function createCase(
+  customerId: string | number,
+  input: CaseInput,
+): Promise<Case> {
+  const res = await fetch(`${API_BASE_URL}/customers/${customerId}/cases`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to open case (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Case>;
+}
+
 /** Fetches a single case with its comment timeline. Returns null if not found. */
 export async function getCase(id: string | number): Promise<Case | null> {
   const res = await fetch(`${API_BASE_URL}/cases/${id}`, { cache: "no-store" });
