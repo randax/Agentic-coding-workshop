@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"ispcrm/internal/product"
+	"saltcrm/internal/product"
 )
 
 // fakeRepo is an in-memory Repository for unit-testing the service.

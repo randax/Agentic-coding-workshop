@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"ispcrm/internal/agent"
+	"saltcrm/internal/agent"
 
 	"github.com/gin-gonic/gin"
 )

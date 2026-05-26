@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"ispcrm/internal/supportcase"
+	"saltcrm/internal/supportcase"
 
 	"github.com/gin-gonic/gin"
 )

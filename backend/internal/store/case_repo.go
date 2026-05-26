@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"ispcrm/internal/supportcase"
+	"saltcrm/internal/supportcase"
 
 	"gorm.io/gorm"
 )

@@ -1,4 +1,4 @@
-# ISP CRM
+# SaltCRM
 
 A simple internal CRM for an ISP that sells fiber internet, mesh routers, and TV subscriptions.
 Customer-service agents can view customers, the products/subscriptions each customer has, and the
