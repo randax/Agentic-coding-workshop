@@ -1,13 +1,14 @@
+import Link from "next/link";
 import type { Case, CaseStatus, CasePriority } from "@/lib/api";
 
-const STATUS_LABELS: Record<CaseStatus, string> = {
+export const STATUS_LABELS: Record<CaseStatus, string> = {
   open: "Open",
   in_progress: "In progress",
   resolved: "Resolved",
   closed: "Closed",
 };
 
-const STATUS_STYLES: Record<CaseStatus, string> = {
+export const STATUS_STYLES: Record<CaseStatus, string> = {
   open: "bg-blue-100 text-blue-800 ring-blue-600/20",
   in_progress: "bg-amber-100 text-amber-800 ring-amber-600/20",
   resolved: "bg-green-100 text-green-800 ring-green-600/20",
@@ -45,8 +46,13 @@ export default function CaseList({ cases }: { cases: Case[] }) {
         <tbody className="divide-y divide-gray-100">
           {cases.map((c) => (
             <tr key={c.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 font-medium text-gray-900">
-                {c.subject}
+              <td className="px-4 py-3 font-medium">
+                <Link
+                  href={`/cases/${c.id}`}
+                  className="text-gray-900 hover:text-blue-700 hover:underline"
+                >
+                  {c.subject}
+                </Link>
               </td>
               <td className="px-4 py-3 capitalize text-gray-600">
                 {c.category}

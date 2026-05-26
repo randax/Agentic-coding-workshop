@@ -29,6 +29,14 @@ describe("CaseList", () => {
     expect(screen.getByText("Sam Carter")).toBeInTheDocument();
   });
 
+  it("links each case to its detail page", () => {
+    render(<CaseList cases={[sampleCase]} />);
+
+    expect(
+      screen.getByRole("link", { name: "No internet since this morning" }),
+    ).toHaveAttribute("href", "/cases/1");
+  });
+
   it("shows an unassigned label when no agent is assigned", () => {
     render(<CaseList cases={[{ ...sampleCase, assignedAgent: null }]} />);
 

@@ -57,6 +57,16 @@ export type CaseCategory =
 export type CasePriority = "low" | "medium" | "high" | "urgent";
 export type CaseStatus = "open" | "in_progress" | "resolved" | "closed";
 
+export interface CaseComment {
+  id: number;
+  caseId: number;
+  body: string;
+  authorAgentId?: number | null;
+  authorAgent?: Agent | null;
+  /** ISO-8601 timestamp. */
+  createdAt: string;
+}
+
 export interface Case {
   id: number;
   customerId: number;
@@ -67,6 +77,8 @@ export interface Case {
   status: CaseStatus;
   assignedAgentId?: number | null;
   assignedAgent?: Agent | null;
+  /** Chronological timeline (oldest first), present on the case-detail response. */
+  comments?: CaseComment[];
   /** ISO-8601 timestamps. */
   createdAt: string;
   updatedAt: string;
@@ -128,6 +140,18 @@ export async function getCustomerCases(
     throw new Error(`Failed to load cases (HTTP ${res.status})`);
   }
   return res.json() as Promise<Case[]>;
+}
+
+/** Fetches a single case with its comment timeline. Returns null if not found. */
+export async function getCase(id: string | number): Promise<Case | null> {
+  const res = await fetch(`${API_BASE_URL}/cases/${id}`, { cache: "no-store" });
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to load case (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Case>;
 }
 
 /** Fetches a customer's subscriptions. Data is always fresh (uncached). */
