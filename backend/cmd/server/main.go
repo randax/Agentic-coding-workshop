@@ -33,7 +33,7 @@ func main() {
 
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
-	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db))
+	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db), products)
 	router := api.NewRouter(customers, products, subscriptions)
 
 	log.Printf("ISP CRM API listening on %s (db: %s)", addr, dsn)

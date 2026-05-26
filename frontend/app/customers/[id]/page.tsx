@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import {
   getCustomer,
   getCustomerSubscriptions,
+  getProducts,
   type Subscription,
+  type Product,
   API_BASE_URL,
 } from "@/lib/api";
 import CustomerDetail, { type TabKey } from "./CustomerDetail";
@@ -41,13 +43,21 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
-  // Only the Subscriptions tab needs this data; fetch it lazily.
+  // Only the Subscriptions tab needs this data; fetch it lazily. The add form
+  // offers products still available in the catalog (retired ones can't be sold).
   let subscriptions: Subscription[] = [];
+  let availableProducts: Product[] = [];
   if (activeTab === "subscriptions") {
     try {
-      subscriptions = await getCustomerSubscriptions(id);
+      const [subs, products] = await Promise.all([
+        getCustomerSubscriptions(id),
+        getProducts(),
+      ]);
+      subscriptions = subs;
+      availableProducts = products.filter((p) => p.available);
     } catch {
       subscriptions = [];
+      availableProducts = [];
     }
   }
 
@@ -64,6 +74,7 @@ export default async function CustomerDetailPage({
           customer={customer}
           activeTab={activeTab}
           subscriptions={subscriptions}
+          availableProducts={availableProducts}
         />
       </div>
     </main>
