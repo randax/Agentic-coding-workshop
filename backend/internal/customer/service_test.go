@@ -36,7 +36,7 @@ func TestServiceListReturnsCustomersFromRepository(t *testing.T) {
 	}
 	svc := NewService(&fakeRepo{customers: want})
 
-	got, err := svc.List(context.Background())
+	got, err := svc.List(context.Background(), Filter{})
 	if err != nil {
 		t.Fatalf("List returned unexpected error: %v", err)
 	}
@@ -66,11 +66,97 @@ func TestServiceGetReturnsCustomerByID(t *testing.T) {
 	}
 }
 
+func TestServiceListFiltersByPartialNameCaseInsensitive(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace", AccountNumber: "ACME-001"},
+		{ID: 2, Name: "Alan Turing", AccountNumber: "ACME-002"},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.List(context.Background(), Filter{Search: "lOV"})
+	if err != nil {
+		t.Fatalf("List returned unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("List(search=lOV) returned %d customers, want 1: %+v", len(got), got)
+	}
+	if got[0].Name != "Ada Lovelace" {
+		t.Errorf("got %q, want %q", got[0].Name, "Ada Lovelace")
+	}
+}
+
+func TestServiceListFiltersByPartialEmail(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace", Email: "ada@analytical.example"},
+		{ID: 2, Name: "Alan Turing", Email: "alan@bletchley.example"},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.List(context.Background(), Filter{Search: "bletchley"})
+	if err != nil {
+		t.Fatalf("List returned unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Alan Turing" {
+		t.Fatalf("List(search=bletchley) = %+v, want only Alan Turing", got)
+	}
+}
+
+func TestServiceListFiltersByPartialAccountNumber(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace", AccountNumber: "ACME-001"},
+		{ID: 2, Name: "Alan Turing", AccountNumber: "GLOBEX-7"},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.List(context.Background(), Filter{Search: "globex"})
+	if err != nil {
+		t.Fatalf("List returned unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Alan Turing" {
+		t.Fatalf("List(search=globex) = %+v, want only Alan Turing", got)
+	}
+}
+
+func TestServiceListFiltersByStatus(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace", Status: StatusActive},
+		{ID: 2, Name: "Alan Turing", Status: StatusSuspended},
+		{ID: 3, Name: "Grace Hopper", Status: StatusActive},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.List(context.Background(), Filter{Status: StatusSuspended})
+	if err != nil {
+		t.Fatalf("List returned unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Alan Turing" {
+		t.Fatalf("List(status=suspended) = %+v, want only Alan Turing", got)
+	}
+}
+
+func TestServiceListCombinesSearchAndStatus(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace", Status: StatusActive},
+		{ID: 2, Name: "Ada Byron", Status: StatusSuspended},
+		{ID: 3, Name: "Grace Hopper", Status: StatusActive},
+	}}
+	svc := NewService(repo)
+
+	// "ada" matches customers 1 and 2; status=active narrows to customer 1.
+	got, err := svc.List(context.Background(), Filter{Search: "ada", Status: StatusActive})
+	if err != nil {
+		t.Fatalf("List returned unexpected error: %v", err)
+	}
+	if len(got) != 1 || got[0].Name != "Ada Lovelace" {
+		t.Fatalf("List(search=ada,status=active) = %+v, want only Ada Lovelace", got)
+	}
+}
+
 func TestServiceListPropagatesRepositoryError(t *testing.T) {
 	repoErr := errors.New("database unavailable")
 	svc := NewService(&fakeRepo{err: repoErr})
 
-	_, err := svc.List(context.Background())
+	_, err := svc.List(context.Background(), Filter{})
 	if !errors.Is(err, repoErr) {
 		t.Fatalf("List error = %v, want %v", err, repoErr)
 	}

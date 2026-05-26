@@ -45,9 +45,24 @@ export interface Subscription {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
-/** Fetches all customers. Data is always fresh (uncached). */
-export async function getCustomers(): Promise<Customer[]> {
-  const res = await fetch(`${API_BASE_URL}/customers`, { cache: "no-store" });
+/** Optional filters for the customer list, forwarded to the backend as query params. */
+export interface CustomerFilters {
+  /** Partial, case-insensitive term matched against name, email, or account number. */
+  search?: string;
+  status?: CustomerStatus;
+}
+
+/** Fetches customers, optionally filtered by search term and status. Always fresh (uncached). */
+export async function getCustomers(
+  filters: CustomerFilters = {},
+): Promise<Customer[]> {
+  const params = new URLSearchParams();
+  if (filters.search) params.set("search", filters.search);
+  if (filters.status) params.set("status", filters.status);
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/customers${qs ? `?${qs}` : ""}`;
+
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Failed to load customers (HTTP ${res.status})`);
   }
