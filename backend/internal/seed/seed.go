@@ -5,6 +5,8 @@
 package seed
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"ispcrm/internal/agent"
@@ -80,35 +82,41 @@ func seedCases(db *gorm.DB) error {
 		return &id
 	}
 
-	cases := []supportcase.Case{
-		{
-			CustomerID: customers[0].ID, Subject: "No internet since this morning",
-			Description: "Connection dropped around 08:00 and has not come back.",
-			Category:    supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh,
-			Status: supportcase.StatusOpen, AssignedAgentID: agentID(0),
-		},
-		{
-			CustomerID: customers[0].ID, Subject: "Charged twice for August",
-			Description: "My August invoice shows two fiber charges.",
-			Category:    supportcase.CategoryBilling, Priority: supportcase.PriorityMedium,
-			Status: supportcase.StatusInProgress, AssignedAgentID: agentID(1),
-		},
+	type spec struct {
+		custIdx              int
+		subject, description string
+		category             supportcase.Category
+		priority             supportcase.Priority
+		status               supportcase.Status
+		agentIdx             int
 	}
-	if len(customers) > 1 {
-		cases = append(cases,
-			supportcase.Case{
-				CustomerID: customers[1].ID, Subject: "Mesh router keeps rebooting",
-				Description: "The MeshPro reboots every few hours.",
-				Category:    supportcase.CategoryHardware, Priority: supportcase.PriorityUrgent,
-				Status: supportcase.StatusOpen, AssignedAgentID: agentID(2),
-			},
-			supportcase.Case{
-				CustomerID: customers[1].ID, Subject: "How do I add an extra TV box?",
-				Description: "Want a second TV package decoder.",
-				Category:    supportcase.CategoryTV, Priority: supportcase.PriorityLow,
-				Status: supportcase.StatusResolved, AssignedAgentID: agentID(0),
-			},
-		)
+	specs := []spec{
+		{0, "No internet since this morning", "Connection dropped around 08:00 and has not come back.", supportcase.CategoryConnectivity, supportcase.PriorityHigh, supportcase.StatusOpen, 0},
+		{0, "Charged twice for August", "My August invoice shows two fiber charges.", supportcase.CategoryBilling, supportcase.PriorityMedium, supportcase.StatusInProgress, 1},
+		{1, "Mesh router keeps rebooting", "The MeshPro reboots every few hours.", supportcase.CategoryHardware, supportcase.PriorityUrgent, supportcase.StatusOpen, 2},
+		{1, "How do I add an extra TV box?", "Want a second TV package decoder.", supportcase.CategoryTV, supportcase.PriorityLow, supportcase.StatusResolved, 0},
+		{2, "Requesting a speed upgrade", "Interested in moving from Fiber 500 to Fiber 1000.", supportcase.CategoryGeneral, supportcase.PriorityLow, supportcase.StatusClosed, 1},
+		{3, "Intermittent packet loss in the evenings", "Latency spikes between 20:00 and 23:00.", supportcase.CategoryConnectivity, supportcase.PriorityHigh, supportcase.StatusInProgress, 2},
+		{4, "Refund for service downtime", "Three days without service last week.", supportcase.CategoryBilling, supportcase.PriorityMedium, supportcase.StatusResolved, 0},
+		{5, "Router LED blinking red", "The router shows a steady red light.", supportcase.CategoryHardware, supportcase.PriorityHigh, supportcase.StatusOpen, 1},
+		{6, "TV channels missing after update", "Several channels disappeared from the Premium package.", supportcase.CategoryTV, supportcase.PriorityMedium, supportcase.StatusInProgress, 2},
+		{7, "Question about contract terms", "When does my current term end?", supportcase.CategoryGeneral, supportcase.PriorityLow, supportcase.StatusClosed, 0},
+	}
+
+	cases := make([]supportcase.Case, 0, len(specs))
+	for _, s := range specs {
+		if s.custIdx >= len(customers) {
+			continue
+		}
+		cases = append(cases, supportcase.Case{
+			CustomerID:      customers[s.custIdx].ID,
+			Subject:         s.subject,
+			Description:     s.description,
+			Category:        s.category,
+			Priority:        s.priority,
+			Status:          s.status,
+			AssignedAgentID: agentID(s.agentIdx),
+		})
 	}
 
 	// Omit the AssignedAgent association so GORM persists only the FK, never a phantom agent.
@@ -149,6 +157,19 @@ func seedCaseComments(db *gorm.DB) error {
 			"Looked at the August invoice; confirming the duplicate fiber charge.",
 			"Refund for the duplicate line has been requested.",
 		},
+		{
+			"Fiber 1000 is available at your address — happy to switch you over.",
+			"Upgrade scheduled and confirmed. Closing this out.",
+		},
+		{
+			"We're seeing elevated latency on the regional segment in the evenings.",
+			"Network team is rebalancing traffic; this should improve within 48h.",
+			"Monitoring shows evening latency back to normal.",
+		},
+		{
+			"Confirmed three days of downtime on your account last week.",
+			"A credit for the downtime has been applied to your next invoice.",
+		},
 	}
 	for ci, script := range scripts {
 		if ci >= len(cases) {
@@ -183,34 +204,40 @@ func seedCustomers(db *gorm.DB) error {
 		return nil
 	}
 
-	customers := []customer.Customer{
-		{
-			Name:           "Ada Lovelace",
-			Email:          "ada@example.com",
-			Phone:          "+47 900 00 001",
-			ServiceAddress: "Storgata 1, 0155 Oslo",
-			AccountNumber:  "ISP-1001",
-			CustomerSince:  time.Date(2021, time.March, 14, 0, 0, 0, 0, time.UTC),
-			Status:         customer.StatusActive,
-		},
-		{
-			Name:           "Alan Turing",
-			Email:          "alan@example.com",
-			Phone:          "+47 900 00 002",
-			ServiceAddress: "Kongens gate 7, 0153 Oslo",
-			AccountNumber:  "ISP-1002",
-			CustomerSince:  time.Date(2022, time.June, 23, 0, 0, 0, 0, time.UTC),
-			Status:         customer.StatusActive,
-		},
-		{
-			Name:           "Grace Hopper",
-			Email:          "grace@example.com",
-			Phone:          "+47 900 00 003",
-			ServiceAddress: "Havnegata 12, 7010 Trondheim",
-			AccountNumber:  "ISP-1003",
-			CustomerSince:  time.Date(2020, time.December, 9, 0, 0, 0, 0, time.UTC),
-			Status:         customer.StatusSuspended,
-		},
+	type spec struct {
+		name, address string
+		status        customer.Status
+	}
+	specs := []spec{
+		{"Ada Lovelace", "Storgata 1, 0155 Oslo", customer.StatusActive},
+		{"Alan Turing", "Kongens gate 7, 0153 Oslo", customer.StatusActive},
+		{"Grace Hopper", "Havnegata 12, 7010 Trondheim", customer.StatusSuspended},
+		{"Katherine Johnson", "Bryggen 5, 5003 Bergen", customer.StatusActive},
+		{"Edsger Dijkstra", "Nygårdsgaten 9, 5015 Bergen", customer.StatusActive},
+		{"Margaret Hamilton", "Torggata 20, 0183 Oslo", customer.StatusActive},
+		{"Linus Torvalds", "Dronningens gate 3, 7011 Trondheim", customer.StatusActive},
+		{"Barbara Liskov", "Kirkegata 14, 4006 Stavanger", customer.StatusActive},
+		{"Dennis Ritchie", "Olav Tryggvasons gate 2, 7011 Trondheim", customer.StatusSuspended},
+		{"Donald Knuth", "Karl Johans gate 25, 0159 Oslo", customer.StatusActive},
+		{"Ken Thompson", "Strandgata 8, 9008 Tromsø", customer.StatusActive},
+		{"Radia Perlman", "Storgata 44, 9008 Tromsø", customer.StatusActive},
+		{"Tim Berners-Lee", "Skippergata 11, 0152 Oslo", customer.StatusActive},
+		{"Vint Cerf", "Prinsens gate 6, 4005 Stavanger", customer.StatusActive},
+	}
+
+	base := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
+	customers := make([]customer.Customer, len(specs))
+	for i, s := range specs {
+		firstName := strings.ToLower(strings.Fields(s.name)[0])
+		customers[i] = customer.Customer{
+			Name:           s.name,
+			Email:          firstName + "@example.com",
+			Phone:          fmt.Sprintf("+47 900 %02d %03d", i+1, (i*37)%1000),
+			ServiceAddress: s.address,
+			AccountNumber:  fmt.Sprintf("ISP-%04d", 1001+i),
+			CustomerSince:  base.AddDate(0, i*2, i),
+			Status:         s.status,
+		}
 	}
 	return db.Create(&customers).Error
 }
@@ -268,33 +295,45 @@ func seedSubscriptions(db *gorm.DB) error {
 		}
 	}
 
+	fiber, hasFiber := byCat[product.CategoryFiber]
+	router, hasRouter := byCat[product.CategoryRouter]
+	tv, hasTV := byCat[product.CategoryTV]
+
 	start := time.Now().AddDate(-1, 0, 0)
 	ended := time.Now().AddDate(0, -2, 0)
 
+	// Rotate the fiber subscription's status so active/pending/cancelled all
+	// appear across the customer base.
+	fiberStatuses := []subscription.Status{
+		subscription.StatusActive, subscription.StatusActive, subscription.StatusPending,
+		subscription.StatusActive, subscription.StatusCancelled,
+	}
+
 	var subs []subscription.Subscription
-	if fiber, ok := byCat[product.CategoryFiber]; ok {
-		subs = append(subs, subscription.Subscription{
-			CustomerID: customers[0].ID, ProductID: fiber.ID, Status: subscription.StatusActive,
-			StartDate: start, MonthlyPriceSnapshot: fiber.MonthlyPrice, Quantity: 1,
-		})
-	}
-	if router, ok := byCat[product.CategoryRouter]; ok {
-		subs = append(subs, subscription.Subscription{
-			CustomerID: customers[0].ID, ProductID: router.ID, Status: subscription.StatusActive,
-			StartDate: start, MonthlyPriceSnapshot: router.MonthlyPrice, Quantity: 2,
-		})
-	}
-	if len(customers) > 1 {
-		if tv, ok := byCat[product.CategoryTV]; ok {
+	for i, c := range customers {
+		if hasFiber {
+			st := fiberStatuses[i%len(fiberStatuses)]
+			sub := subscription.Subscription{
+				CustomerID: c.ID, ProductID: fiber.ID, Status: st,
+				StartDate: start, MonthlyPriceSnapshot: fiber.MonthlyPrice, Quantity: 1,
+			}
+			if st == subscription.StatusCancelled {
+				sub.EndDate = &ended
+			}
+			subs = append(subs, sub)
+		}
+		// Every third customer also rents mesh routers, in varied quantities.
+		if hasRouter && i%3 == 0 {
 			subs = append(subs, subscription.Subscription{
-				CustomerID: customers[1].ID, ProductID: tv.ID, Status: subscription.StatusActive,
-				StartDate: start, MonthlyPriceSnapshot: tv.MonthlyPrice, Quantity: 1,
+				CustomerID: c.ID, ProductID: router.ID, Status: subscription.StatusActive,
+				StartDate: start, MonthlyPriceSnapshot: router.MonthlyPrice, Quantity: 2 + i%2,
 			})
 		}
-		if fiber, ok := byCat[product.CategoryFiber]; ok {
+		// Every other customer has a TV package.
+		if hasTV && i%2 == 0 {
 			subs = append(subs, subscription.Subscription{
-				CustomerID: customers[1].ID, ProductID: fiber.ID, Status: subscription.StatusCancelled,
-				StartDate: start, EndDate: &ended, MonthlyPriceSnapshot: fiber.MonthlyPrice, Quantity: 1,
+				CustomerID: c.ID, ProductID: tv.ID, Status: subscription.StatusActive,
+				StartDate: start, MonthlyPriceSnapshot: tv.MonthlyPrice, Quantity: 1,
 			})
 		}
 	}

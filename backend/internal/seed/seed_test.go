@@ -41,8 +41,8 @@ func TestDemoSeedsCustomersIntoEmptyDB(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
-	if n := countCustomers(t, db); n < 2 {
-		t.Fatalf("after seeding got %d customers, want at least 2", n)
+	if n := countCustomers(t, db); n < 10 || n > 20 {
+		t.Fatalf("after seeding got %d customers, want 10-20", n)
 	}
 }
 
@@ -100,6 +100,36 @@ func TestDemoSeedsSubscriptionsLinkingCustomersToProducts(t *testing.T) {
 	}
 }
 
+func TestDemoSeedsVariedSubscriptions(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var subs []subscription.Subscription
+	db.Find(&subs)
+
+	seen := map[subscription.Status]bool{}
+	maxQty := 0
+	for _, s := range subs {
+		seen[s.Status] = true
+		if s.Quantity > maxQty {
+			maxQty = s.Quantity
+		}
+	}
+	for _, st := range []subscription.Status{
+		subscription.StatusActive, subscription.StatusPending, subscription.StatusCancelled,
+	} {
+		if !seen[st] {
+			t.Errorf("expected at least one %q subscription", st)
+		}
+	}
+	if maxQty < 2 {
+		t.Errorf("expected at least one subscription with quantity > 1, max was %d", maxQty)
+	}
+}
+
 func TestDemoSeedsCasesLinkedToCustomersAndAgents(t *testing.T) {
 	db := freshDB(t)
 
@@ -128,6 +158,40 @@ func TestDemoSeedsCasesLinkedToCustomersAndAgents(t *testing.T) {
 	}
 }
 
+func TestDemoSeedsCasesAcrossStatusesCategoriesPriorities(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var cases []supportcase.Case
+	db.Find(&cases)
+
+	statuses := map[supportcase.Status]bool{}
+	cats := map[supportcase.Category]bool{}
+	pris := map[supportcase.Priority]bool{}
+	for _, c := range cases {
+		statuses[c.Status] = true
+		cats[c.Category] = true
+		pris[c.Priority] = true
+	}
+	for _, st := range []supportcase.Status{
+		supportcase.StatusOpen, supportcase.StatusInProgress,
+		supportcase.StatusResolved, supportcase.StatusClosed,
+	} {
+		if !statuses[st] {
+			t.Errorf("expected at least one case with status %q", st)
+		}
+	}
+	if len(cats) < 3 {
+		t.Errorf("expected cases across at least 3 categories, got %d", len(cats))
+	}
+	if len(pris) < 3 {
+		t.Errorf("expected cases across at least 3 priorities, got %d", len(pris))
+	}
+}
+
 func TestDemoSeedsCaseCommentTimelines(t *testing.T) {
 	db := freshDB(t)
 
@@ -153,20 +217,56 @@ func TestDemoSeedsCaseCommentTimelines(t *testing.T) {
 	}
 }
 
+func TestDemoSeedsMultiCommentTimelines(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var comments []supportcase.CaseComment
+	db.Find(&comments)
+
+	perCase := map[uint]int{}
+	for _, cm := range comments {
+		perCase[cm.CaseID]++
+	}
+	multi := 0
+	for _, n := range perCase {
+		if n >= 2 {
+			multi++
+		}
+	}
+	if multi < 3 {
+		t.Errorf("expected at least 3 cases with multi-comment timelines, got %d", multi)
+	}
+}
+
 func TestDemoIsIdempotent(t *testing.T) {
 	db := freshDB(t)
 
 	if err := seed.Demo(db); err != nil {
 		t.Fatalf("first seed: %v", err)
 	}
-	first := countCustomers(t, db)
+
+	type counts struct{ customers, subs, cases, comments, agents int64 }
+	snapshot := func() counts {
+		var c counts
+		db.Model(&customer.Customer{}).Count(&c.customers)
+		db.Model(&subscription.Subscription{}).Count(&c.subs)
+		db.Model(&supportcase.Case{}).Count(&c.cases)
+		db.Model(&supportcase.CaseComment{}).Count(&c.comments)
+		db.Model(&agent.Agent{}).Count(&c.agents)
+		return c
+	}
+	first := snapshot()
 
 	if err := seed.Demo(db); err != nil {
 		t.Fatalf("second seed: %v", err)
 	}
-	second := countCustomers(t, db)
+	second := snapshot()
 
 	if first != second {
-		t.Errorf("seeding twice changed count from %d to %d; want idempotent", first, second)
+		t.Errorf("seeding twice changed counts from %+v to %+v; want idempotent", first, second)
 	}
 }
