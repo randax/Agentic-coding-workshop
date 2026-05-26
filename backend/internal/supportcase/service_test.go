@@ -324,6 +324,84 @@ func TestChangeStatusUnknownCaseReturnsNotFound(t *testing.T) {
 	}
 }
 
+func ptr[T any](v T) *T { return &v }
+
+func TestUpdateMetadataChangesPriorityOnly(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{
+		{ID: 5, CustomerID: 7, Subject: "No internet", Status: StatusOpen,
+			Category: CategoryConnectivity, Priority: PriorityLow},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.UpdateMetadata(context.Background(), 5, MetadataPatch{Priority: ptr(PriorityUrgent)})
+	if err != nil {
+		t.Fatalf("UpdateMetadata returned unexpected error: %v", err)
+	}
+	if got.Priority != PriorityUrgent {
+		t.Errorf("priority = %q, want %q", got.Priority, PriorityUrgent)
+	}
+	// Untouched fields stay put.
+	if got.Category != CategoryConnectivity || got.Status != StatusOpen {
+		t.Errorf("UpdateMetadata changed untouched fields: %+v", got)
+	}
+	if repo.cases[0].Priority != PriorityUrgent {
+		t.Errorf("persisted priority = %q, want %q", repo.cases[0].Priority, PriorityUrgent)
+	}
+}
+
+func TestUpdateMetadataAssignsAgentAndCategory(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{
+		{ID: 5, Status: StatusOpen, Category: CategoryGeneral, Priority: PriorityLow},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.UpdateMetadata(context.Background(), 5, MetadataPatch{
+		Category:        ptr(CategoryBilling),
+		AssignedAgentID: ptr(uint(3)),
+	})
+	if err != nil {
+		t.Fatalf("UpdateMetadata returned unexpected error: %v", err)
+	}
+	if got.Category != CategoryBilling {
+		t.Errorf("category = %q, want %q", got.Category, CategoryBilling)
+	}
+	if got.AssignedAgentID == nil || *got.AssignedAgentID != 3 {
+		t.Errorf("case not assigned to agent 3: %+v", got.AssignedAgentID)
+	}
+}
+
+func TestUpdateMetadataRejectsInvalidPriority(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, Status: StatusOpen, Priority: PriorityLow}}}
+	svc := NewService(repo)
+
+	_, err := svc.UpdateMetadata(context.Background(), 5, MetadataPatch{Priority: ptr(Priority("whenever"))})
+	if !errors.Is(err, ErrInvalidPriority) {
+		t.Fatalf("error = %v, want ErrInvalidPriority", err)
+	}
+	if repo.cases[0].Priority != PriorityLow {
+		t.Errorf("priority changed on invalid patch: %q", repo.cases[0].Priority)
+	}
+}
+
+func TestUpdateMetadataRejectsInvalidCategory(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, Status: StatusOpen, Category: CategoryGeneral}}}
+	svc := NewService(repo)
+
+	_, err := svc.UpdateMetadata(context.Background(), 5, MetadataPatch{Category: ptr(Category("nonsense"))})
+	if !errors.Is(err, ErrInvalidCategory) {
+		t.Fatalf("error = %v, want ErrInvalidCategory", err)
+	}
+}
+
+func TestUpdateMetadataUnknownCaseReturnsNotFound(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.UpdateMetadata(context.Background(), 999, MetadataPatch{Priority: ptr(PriorityHigh)})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("error = %v, want ErrNotFound", err)
+	}
+}
+
 func TestListForCustomerPropagatesRepositoryError(t *testing.T) {
 	repoErr := errors.New("database unavailable")
 	svc := NewService(&fakeRepo{err: repoErr})

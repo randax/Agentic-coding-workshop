@@ -105,10 +105,28 @@ func (h *caseHandler) addComment(c *gin.Context) {
 	c.JSON(http.StatusCreated, comment)
 }
 
-// patchCaseRequest is the body of PATCH /cases/:id. For this slice only the
-// status is editable (priority/category/assignee arrive in a later slice).
+// patchCaseRequest is the body of PATCH /cases/:id. Every field is optional;
+// only the provided ones are applied. Status changes go through the lifecycle
+// state machine; priority/category/assignee are metadata edits.
 type patchCaseRequest struct {
-	Status supportcase.Status `json:"status"`
+	Status          *supportcase.Status   `json:"status"`
+	Priority        *supportcase.Priority `json:"priority"`
+	Category        *supportcase.Category `json:"category"`
+	AssignedAgentID *uint                 `json:"assignedAgentId"`
+}
+
+// respondCaseError maps a case service error to its HTTP status.
+func respondCaseError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, supportcase.ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "case not found"})
+	case errors.Is(err, supportcase.ErrIllegalTransition):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, supportcase.ErrInvalidPriority), errors.Is(err, supportcase.ErrInvalidCategory):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update case"})
+	}
 }
 
 func (h *caseHandler) patch(c *gin.Context) {
@@ -122,20 +140,34 @@ func (h *caseHandler) patch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
-	if req.Status == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "status is required"})
-		return
-	}
-	updated, err := h.svc.ChangeStatus(c.Request.Context(), uint(id), req.Status)
-	if err != nil {
-		switch {
-		case errors.Is(err, supportcase.ErrNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": "case not found"})
-		case errors.Is(err, supportcase.ErrIllegalTransition):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update case"})
+
+	ctx := c.Request.Context()
+	caseID := uint(id)
+	var updated supportcase.Case
+	acted := false
+
+	if req.Status != nil {
+		updated, err = h.svc.ChangeStatus(ctx, caseID, *req.Status)
+		if err != nil {
+			respondCaseError(c, err)
+			return
 		}
+		acted = true
+	}
+	if req.Priority != nil || req.Category != nil || req.AssignedAgentID != nil {
+		updated, err = h.svc.UpdateMetadata(ctx, caseID, supportcase.MetadataPatch{
+			Priority:        req.Priority,
+			Category:        req.Category,
+			AssignedAgentID: req.AssignedAgentID,
+		})
+		if err != nil {
+			respondCaseError(c, err)
+			return
+		}
+		acted = true
+	}
+	if !acted {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no fields to update"})
 		return
 	}
 	c.JSON(http.StatusOK, updated)
