@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	"ispcrm/internal/product"
+	"saltcrm/internal/product"
 )
 
 // Status is the lifecycle state of a subscription.

@@ -1,4 +1,4 @@
-# ISP CRM — Backend
+# SaltCRM — Backend
 
 Go API server (Gin + GORM over SQLite).
 
@@ -14,15 +14,15 @@ cd backend
 go run ./cmd/server
 ```
 
-The server listens on `:8080`, creating `ispcrm.db` (SQLite) in the working
+The server listens on `:8080`, creating `saltcrm.db` (SQLite) in the working
 directory and seeding a few demo customers on first run.
 
 Configuration (environment variables):
 
 | Variable      | Default      | Description                     |
 | ------------- | ------------ | ------------------------------- |
-| `ISPCRM_ADDR` | `:8080`      | Address the HTTP server binds   |
-| `ISPCRM_DB`   | `ispcrm.db`  | SQLite database file (DSN)      |
+| `SALTCRM_ADDR` | `:8080`      | Address the HTTP server binds   |
+| `SALTCRM_DB`   | `saltcrm.db`  | SQLite database file (DSN)      |
 
 ## API
 

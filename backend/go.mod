@@ -1,4 +1,4 @@
-module ispcrm
+module saltcrm
 
 go 1.26.3
 

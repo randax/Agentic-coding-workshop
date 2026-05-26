@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"ispcrm/internal/agent"
+	"saltcrm/internal/agent"
 )
 
 // ErrNotFound is returned when a requested case does not exist.

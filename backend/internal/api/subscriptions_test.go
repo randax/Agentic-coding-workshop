@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"ispcrm/internal/customer"
-	"ispcrm/internal/product"
-	"ispcrm/internal/subscription"
+	"saltcrm/internal/customer"
+	"saltcrm/internal/product"
+	"saltcrm/internal/subscription"
 
 	"gorm.io/gorm"
 )

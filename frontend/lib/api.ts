@@ -1,4 +1,4 @@
-// Typed client for the ISP CRM backend API. This is the single seam through
+// Typed client for the SaltCRM backend API. This is the single seam through
 // which the frontend talks to the Go backend; all data access goes through here.
 
 export type CustomerStatus = "active" | "suspended";

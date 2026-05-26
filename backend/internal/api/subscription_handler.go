@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"ispcrm/internal/product"
-	"ispcrm/internal/subscription"
+	"saltcrm/internal/product"
+	"saltcrm/internal/subscription"
 
 	"github.com/gin-gonic/gin"
 )

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"ispcrm/internal/product"
+	"saltcrm/internal/product"
 )
 
 func TestGetProductsReturnsCatalog(t *testing.T) {

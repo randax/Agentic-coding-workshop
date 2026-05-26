@@ -1,4 +1,4 @@
-# ISP CRM — Frontend
+# SaltCRM — Frontend
 
 Next.js 16 (App Router) + Tailwind CSS. Renders the CRM UI by calling the Go
 backend through a typed API client (`lib/api.ts`).

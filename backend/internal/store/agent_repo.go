@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"ispcrm/internal/agent"
+	"saltcrm/internal/agent"
 
 	"gorm.io/gorm"
 )

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"ispcrm/internal/agent"
-	"ispcrm/internal/customer"
-	"ispcrm/internal/product"
-	"ispcrm/internal/subscription"
-	"ispcrm/internal/supportcase"
+	"saltcrm/internal/agent"
+	"saltcrm/internal/customer"
+	"saltcrm/internal/product"
+	"saltcrm/internal/subscription"
+	"saltcrm/internal/supportcase"
 
 	"gorm.io/gorm"
 )

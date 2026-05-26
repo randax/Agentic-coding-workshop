@@ -1,4 +1,4 @@
-// Command server is the ISP CRM API entry point. It wires the persistence,
+// Command server is the SaltCRM API entry point. It wires the persistence,
 // service, and HTTP layers together, seeds demo data, and serves the API.
 package main
 
@@ -8,19 +8,19 @@ import (
 	"net/http"
 	"os"
 
-	"ispcrm/internal/agent"
-	"ispcrm/internal/api"
-	"ispcrm/internal/customer"
-	"ispcrm/internal/product"
-	"ispcrm/internal/seed"
-	"ispcrm/internal/store"
-	"ispcrm/internal/subscription"
-	"ispcrm/internal/supportcase"
+	"saltcrm/internal/agent"
+	"saltcrm/internal/api"
+	"saltcrm/internal/customer"
+	"saltcrm/internal/product"
+	"saltcrm/internal/seed"
+	"saltcrm/internal/store"
+	"saltcrm/internal/subscription"
+	"saltcrm/internal/supportcase"
 )
 
 func main() {
-	dsn := cmp.Or(os.Getenv("ISPCRM_DB"), "ispcrm.db")
-	addr := cmp.Or(os.Getenv("ISPCRM_ADDR"), ":8080")
+	dsn := cmp.Or(os.Getenv("SALTCRM_DB"), "saltcrm.db")
+	addr := cmp.Or(os.Getenv("SALTCRM_ADDR"), ":8080")
 
 	db, err := store.Open(dsn)
 	if err != nil {
@@ -40,7 +40,7 @@ func main() {
 	cases := supportcase.NewService(store.NewCaseRepository(db))
 	router := api.NewRouter(customers, products, subscriptions, agents, cases)
 
-	log.Printf("ISP CRM API listening on %s (db: %s)", addr, dsn)
+	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {
 		log.Fatalf("server stopped: %v", err)
 	}
