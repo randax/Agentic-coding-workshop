@@ -148,6 +148,31 @@ func TestRetireUnknownProductReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestUnretireMarksProductAvailable(t *testing.T) {
+	svc := NewService(newFakeRepo())
+	ctx := context.Background()
+	created, _ := svc.Create(ctx, Product{Name: "Fiber 500", Category: CategoryFiber, MonthlyPrice: 499})
+	svc.Retire(ctx, created.ID)
+
+	if err := svc.Unretire(ctx, created.ID); err != nil {
+		t.Fatalf("Unretire returned unexpected error: %v", err)
+	}
+
+	got, _ := svc.Get(ctx, created.ID)
+	if !got.Available {
+		t.Errorf("unretired product should be available again")
+	}
+}
+
+func TestUnretireUnknownProductReturnsNotFound(t *testing.T) {
+	svc := NewService(newFakeRepo())
+
+	err := svc.Unretire(context.Background(), 9999)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Unretire error = %v, want ErrNotFound", err)
+	}
+}
+
 func TestUpdateEditsProductFields(t *testing.T) {
 	svc := NewService(newFakeRepo())
 	ctx := context.Background()
@@ -166,5 +191,35 @@ func TestUpdateEditsProductFields(t *testing.T) {
 	got, _ := svc.Get(ctx, created.ID)
 	if got.Name != "Fiber 1000" || got.MonthlyPrice != 699 {
 		t.Errorf("persisted product = %+v, want name=Fiber 1000 price=699", got)
+	}
+}
+
+func TestUpdatePreservesAvailability(t *testing.T) {
+	svc := NewService(newFakeRepo())
+	ctx := context.Background()
+	created, _ := svc.Create(ctx, Product{Name: "Fiber 500", Category: CategoryFiber, MonthlyPrice: 499})
+	if err := svc.Retire(ctx, created.ID); err != nil {
+		t.Fatalf("Retire returned unexpected error: %v", err)
+	}
+
+	// The edit payload carries the zero value for Available; editing must not
+	// silently un-retire (or retire) a product — availability is server-managed.
+	created.Available = true
+	created.Name = "Fiber 500 (renamed)"
+	updated, err := svc.Update(ctx, created)
+	if err != nil {
+		t.Fatalf("Update returned unexpected error: %v", err)
+	}
+	if updated.Available {
+		t.Errorf("editing a retired product should keep it retired, got available=%v", updated.Available)
+	}
+}
+
+func TestUpdateUnknownProductReturnsNotFound(t *testing.T) {
+	svc := NewService(newFakeRepo())
+
+	_, err := svc.Update(context.Background(), Product{ID: 9999, Name: "Ghost", Category: CategoryFiber, MonthlyPrice: 1})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Update error = %v, want ErrNotFound", err)
 	}
 }

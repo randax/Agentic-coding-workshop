@@ -80,18 +80,31 @@ func (s *Service) Get(ctx context.Context, id uint) (Product, error) {
 	return s.repo.Get(ctx, id)
 }
 
-// Update edits an existing product, applying the same validation as Create.
+// Update edits an existing product's catalog fields, applying the same
+// validation as Create. The product's availability is server-managed (via
+// Retire/Unretire), so it is preserved across edits by loading the existing
+// record first; an unknown ID yields ErrNotFound.
 func (s *Service) Update(ctx context.Context, p Product) (Product, error) {
+	existing, err := s.repo.Get(ctx, p.ID)
+	if err != nil {
+		return Product{}, err
+	}
 	if !p.Category.Valid() {
 		return Product{}, ErrInvalidCategory
 	}
 	if p.MonthlyPrice < 0 {
 		return Product{}, ErrInvalidPrice
 	}
-	if err := s.repo.Update(ctx, &p); err != nil {
+	existing.Name = p.Name
+	existing.Category = p.Category
+	existing.MonthlyPrice = p.MonthlyPrice
+	existing.SpeedMbps = p.SpeedMbps
+	existing.RouterModel = p.RouterModel
+	existing.TvPackageTier = p.TvPackageTier
+	if err := s.repo.Update(ctx, &existing); err != nil {
 		return Product{}, err
 	}
-	return p, nil
+	return existing, nil
 }
 
 // Retire marks a product unavailable so it can no longer be subscribed to.
@@ -101,6 +114,16 @@ func (s *Service) Retire(ctx context.Context, id uint) error {
 		return err
 	}
 	p.Available = false
+	return s.repo.Update(ctx, &p)
+}
+
+// Unretire marks a retired product available again so it can be subscribed to.
+func (s *Service) Unretire(ctx context.Context, id uint) error {
+	p, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	p.Available = true
 	return s.repo.Update(ctx, &p)
 }
 
