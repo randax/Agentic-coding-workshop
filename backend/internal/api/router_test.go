@@ -100,6 +100,68 @@ func TestGetAgentsReturnsAgents(t *testing.T) {
 	}
 }
 
+func TestGetCaseReturnsCaseWithCommentsInChronologicalOrder(t *testing.T) {
+	db, router := newTestRouter(t)
+	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&cust)
+	ag := agent.Agent{Name: "Sam Carter", Email: "sam@isp.example"}
+	db.Create(&ag)
+	kase := supportcase.Case{
+		CustomerID: cust.ID, Subject: "No internet", Description: "Down since 8am",
+		Category: supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh,
+		Status: supportcase.StatusOpen, AssignedAgentID: &ag.ID,
+	}
+	db.Omit("AssignedAgent").Create(&kase)
+
+	// Insert comments out of chronological order; the response must be sorted.
+	base := time.Now()
+	db.Create(&supportcase.CaseComment{CaseID: kase.ID, Body: "Third", AuthorAgentID: &ag.ID, CreatedAt: base.Add(2 * time.Hour)})
+	db.Create(&supportcase.CaseComment{CaseID: kase.ID, Body: "First", AuthorAgentID: &ag.ID, CreatedAt: base})
+	db.Create(&supportcase.CaseComment{CaseID: kase.ID, Body: "Second", AuthorAgentID: &ag.ID, CreatedAt: base.Add(1 * time.Hour)})
+
+	req := httptest.NewRequest(http.MethodGet, "/cases/"+strconv.FormatUint(uint64(kase.ID), 10), nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got supportcase.Case
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.Subject != "No internet" || got.Description != "Down since 8am" {
+		t.Errorf("case = %+v, want subject/description set", got)
+	}
+	if got.AssignedAgent == nil || got.AssignedAgent.Name != "Sam Carter" {
+		t.Errorf("assigned agent not populated: %+v", got.AssignedAgent)
+	}
+	if len(got.Comments) != 3 {
+		t.Fatalf("got %d comments, want 3; body=%s", len(got.Comments), rec.Body.String())
+	}
+	wantOrder := []string{"First", "Second", "Third"}
+	for i, want := range wantOrder {
+		if got.Comments[i].Body != want {
+			t.Errorf("comment[%d].Body = %q, want %q (timeline must be chronological)", i, got.Comments[i].Body, want)
+		}
+	}
+	if got.Comments[0].AuthorAgent == nil || got.Comments[0].AuthorAgent.Name != "Sam Carter" {
+		t.Errorf("comment author not populated: %+v", got.Comments[0].AuthorAgent)
+	}
+}
+
+func TestGetCaseUnknownReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/cases/9999", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
 func TestGetCustomerCasesReturnsCasesWithAssignedAgent(t *testing.T) {
 	db, router := newTestRouter(t)
 	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}

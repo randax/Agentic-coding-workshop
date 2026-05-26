@@ -31,7 +31,10 @@ func Demo(db *gorm.DB) error {
 	if err := seedAgents(db); err != nil {
 		return err
 	}
-	return seedCases(db)
+	if err := seedCases(db); err != nil {
+		return err
+	}
+	return seedCaseComments(db)
 }
 
 func seedAgents(db *gorm.DB) error {
@@ -110,6 +113,65 @@ func seedCases(db *gorm.DB) error {
 
 	// Omit the AssignedAgent association so GORM persists only the FK, never a phantom agent.
 	return db.Omit("AssignedAgent").Create(&cases).Error
+}
+
+func seedCaseComments(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&supportcase.CaseComment{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var cases []supportcase.Case
+	if err := db.Order("id").Find(&cases).Error; err != nil {
+		return err
+	}
+	var agents []agent.Agent
+	if err := db.Order("id").Find(&agents).Error; err != nil {
+		return err
+	}
+	if len(cases) == 0 || len(agents) == 0 {
+		return nil
+	}
+
+	now := time.Now()
+	var comments []supportcase.CaseComment
+	// Give the first couple of cases a short back-and-forth timeline.
+	scripts := [][]string{
+		{
+			"Thanks for reporting — I can see repeated dropouts on your line.",
+			"Dispatched a line check; please power-cycle the ONT in the meantime.",
+			"Line looks stable again after the check. Let us know if it recurs.",
+		},
+		{
+			"Looked at the August invoice; confirming the duplicate fiber charge.",
+			"Refund for the duplicate line has been requested.",
+		},
+	}
+	for ci, script := range scripts {
+		if ci >= len(cases) {
+			break
+		}
+		caseID := cases[ci].ID
+		for i, body := range script {
+			author := agents[i%len(agents)].ID
+			comments = append(comments, supportcase.CaseComment{
+				CaseID:        caseID,
+				Body:          body,
+				AuthorAgentID: &author,
+				// Stagger timestamps so the timeline has a clear chronological order.
+				CreatedAt: now.Add(time.Duration(ci*10+i) * time.Hour),
+			})
+		}
+	}
+
+	if len(comments) == 0 {
+		return nil
+	}
+	// Omit the AuthorAgent association so GORM persists only the FK, never a phantom agent.
+	return db.Omit("AuthorAgent").Create(&comments).Error
 }
 
 func seedCustomers(db *gorm.DB) error {

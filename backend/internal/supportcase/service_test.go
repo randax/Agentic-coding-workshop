@@ -25,6 +25,18 @@ func (f *fakeRepo) ListByCustomer(ctx context.Context, customerID uint) ([]Case,
 	return out, nil
 }
 
+func (f *fakeRepo) Get(ctx context.Context, id uint) (Case, error) {
+	if f.err != nil {
+		return Case{}, f.err
+	}
+	for _, c := range f.cases {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return Case{}, ErrNotFound
+}
+
 func TestListForCustomerReturnsThatCustomersCases(t *testing.T) {
 	repo := &fakeRepo{cases: []Case{
 		{ID: 1, CustomerID: 7, Subject: "No internet", Status: StatusOpen, Priority: PriorityHigh, Category: CategoryConnectivity},
@@ -39,6 +51,31 @@ func TestListForCustomerReturnsThatCustomersCases(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Fatalf("got %d cases, want 2", len(got))
+	}
+}
+
+func TestGetReturnsCaseWithComments(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{
+		{ID: 5, CustomerID: 7, Subject: "No internet", Status: StatusOpen,
+			Comments: []CaseComment{{ID: 1, CaseID: 5, Body: "Looking into it"}}},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.Get(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("Get returned unexpected error: %v", err)
+	}
+	if got.Subject != "No internet" || len(got.Comments) != 1 {
+		t.Errorf("Get(5) = %+v, want subject 'No internet' with 1 comment", got)
+	}
+}
+
+func TestGetUnknownReturnsNotFound(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.Get(context.Background(), 999)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("Get error = %v, want ErrNotFound", err)
 	}
 }
 

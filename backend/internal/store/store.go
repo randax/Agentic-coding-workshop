@@ -31,5 +31,6 @@ func Migrate(db *gorm.DB) error {
 		&subscription.Subscription{},
 		&agent.Agent{},
 		&supportcase.Case{},
+		&supportcase.CaseComment{},
 	)
 }

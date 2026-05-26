@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"ispcrm/internal/supportcase"
 
@@ -30,4 +31,24 @@ func (r *CaseRepository) ListByCustomer(ctx context.Context, customerID uint) ([
 		return nil, err
 	}
 	return cases, nil
+}
+
+// Get returns a single case with its assigned agent and its comment timeline
+// (oldest first, each comment's author preloaded), translating GORM's not-found
+// error into the domain-level supportcase.ErrNotFound.
+func (r *CaseRepository) Get(ctx context.Context, id uint) (supportcase.Case, error) {
+	var c supportcase.Case
+	if err := r.db.WithContext(ctx).
+		Preload("AssignedAgent").
+		Preload("Comments", func(db *gorm.DB) *gorm.DB {
+			return db.Order("created_at asc")
+		}).
+		Preload("Comments.AuthorAgent").
+		First(&c, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return supportcase.Case{}, supportcase.ErrNotFound
+		}
+		return supportcase.Case{}, err
+	}
+	return c, nil
 }

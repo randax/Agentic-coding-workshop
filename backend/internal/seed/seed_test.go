@@ -128,6 +128,31 @@ func TestDemoSeedsCasesLinkedToCustomersAndAgents(t *testing.T) {
 	}
 }
 
+func TestDemoSeedsCaseCommentTimelines(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var comments []supportcase.CaseComment
+	db.Find(&comments)
+	if len(comments) == 0 {
+		t.Fatal("expected demo case comments to be seeded")
+	}
+	for _, cm := range comments {
+		if cm.CaseID == 0 || cm.Body == "" {
+			t.Errorf("seeded comment %d must reference a case and have a body: %+v", cm.ID, cm)
+		}
+	}
+
+	var authored int64
+	db.Model(&supportcase.CaseComment{}).Where("author_agent_id IS NOT NULL").Count(&authored)
+	if authored == 0 {
+		t.Error("expected at least one seeded comment authored by an agent")
+	}
+}
+
 func TestDemoIsIdempotent(t *testing.T) {
 	db := freshDB(t)
 
