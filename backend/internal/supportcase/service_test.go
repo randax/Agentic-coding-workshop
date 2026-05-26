@@ -8,9 +8,11 @@ import (
 
 // fakeRepo is an in-memory Repository for unit-testing the service in isolation.
 type fakeRepo struct {
-	cases  []Case
-	nextID uint
-	err    error
+	cases         []Case
+	comments      []CaseComment
+	nextID        uint
+	nextCommentID uint
+	err           error
 }
 
 func (f *fakeRepo) ListByCustomer(ctx context.Context, customerID uint) ([]Case, error) {
@@ -32,10 +34,27 @@ func (f *fakeRepo) Get(ctx context.Context, id uint) (Case, error) {
 	}
 	for _, c := range f.cases {
 		if c.ID == id {
+			// Append comments added via CreateComment in insertion order,
+			// mirroring the real repository's chronological preload.
+			for _, cm := range f.comments {
+				if cm.CaseID == id {
+					c.Comments = append(c.Comments, cm)
+				}
+			}
 			return c, nil
 		}
 	}
 	return Case{}, ErrNotFound
+}
+
+func (f *fakeRepo) CreateComment(ctx context.Context, cm *CaseComment) error {
+	if f.err != nil {
+		return f.err
+	}
+	f.nextCommentID++
+	cm.ID = f.nextCommentID
+	f.comments = append(f.comments, *cm)
+	return nil
 }
 
 func (f *fakeRepo) Create(ctx context.Context, c *Case) error {
@@ -149,6 +168,70 @@ func TestCreateRejectsInvalidPriority(t *testing.T) {
 	})
 	if !errors.Is(err, ErrInvalidPriority) {
 		t.Fatalf("Create error = %v, want ErrInvalidPriority", err)
+	}
+}
+
+func TestAddCommentAppendsCommentAttributedToAgent(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, CustomerID: 7, Subject: "No internet", Status: StatusOpen}}}
+	svc := NewService(repo)
+
+	got, err := svc.AddComment(context.Background(), 5, 2, "Looking into it")
+	if err != nil {
+		t.Fatalf("AddComment returned unexpected error: %v", err)
+	}
+	if got.ID == 0 || got.CaseID != 5 || got.Body != "Looking into it" {
+		t.Errorf("AddComment = %+v, want case 5 body 'Looking into it' with ID", got)
+	}
+	if got.AuthorAgentID == nil || *got.AuthorAgentID != 2 {
+		t.Errorf("comment not attributed to agent 2: %+v", got.AuthorAgentID)
+	}
+}
+
+func TestAddCommentTimelineKeepsOrderAndAttribution(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, CustomerID: 7, Subject: "No internet", Status: StatusOpen}}}
+	svc := NewService(repo)
+
+	if _, err := svc.AddComment(context.Background(), 5, 1, "First from agent 1"); err != nil {
+		t.Fatalf("AddComment 1: %v", err)
+	}
+	if _, err := svc.AddComment(context.Background(), 5, 2, "Second from agent 2"); err != nil {
+		t.Fatalf("AddComment 2: %v", err)
+	}
+
+	got, err := svc.Get(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if len(got.Comments) != 2 {
+		t.Fatalf("got %d comments, want 2", len(got.Comments))
+	}
+	if got.Comments[0].Body != "First from agent 1" || *got.Comments[0].AuthorAgentID != 1 {
+		t.Errorf("comment[0] = %+v, want first from agent 1", got.Comments[0])
+	}
+	if got.Comments[1].Body != "Second from agent 2" || *got.Comments[1].AuthorAgentID != 2 {
+		t.Errorf("comment[1] = %+v, want second from agent 2", got.Comments[1])
+	}
+}
+
+func TestAddCommentRejectsEmptyBody(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, Status: StatusOpen}}}
+	svc := NewService(repo)
+
+	_, err := svc.AddComment(context.Background(), 5, 1, "   ")
+	if !errors.Is(err, ErrCommentBodyRequired) {
+		t.Fatalf("AddComment error = %v, want ErrCommentBodyRequired", err)
+	}
+	if len(repo.comments) != 0 {
+		t.Errorf("empty comment was persisted: %+v", repo.comments)
+	}
+}
+
+func TestAddCommentToUnknownCaseReturnsNotFound(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.AddComment(context.Background(), 999, 1, "Hello")
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("AddComment error = %v, want ErrNotFound", err)
 	}
 }
 

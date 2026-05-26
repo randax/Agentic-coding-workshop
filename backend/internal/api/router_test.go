@@ -145,6 +145,85 @@ func TestPostCustomerCaseInvalidCategoryReturns400(t *testing.T) {
 	}
 }
 
+func TestPostCaseCommentAppendsToTimeline(t *testing.T) {
+	db, router := newTestRouter(t)
+	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&cust)
+	ag := agent.Agent{Name: "Sam Carter", Email: "sam@isp.example"}
+	db.Create(&ag)
+	kase := supportcase.Case{CustomerID: cust.ID, Subject: "No internet", Category: supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+	// An earlier comment so we can verify the new one lands at the end.
+	db.Create(&supportcase.CaseComment{CaseID: kase.ID, Body: "Earlier note", AuthorAgentID: &ag.ID, CreatedAt: time.Now().Add(-time.Hour)})
+
+	caseIDStr := strconv.FormatUint(uint64(kase.ID), 10)
+	body := `{"body":"Following up now","authorAgentId":` + strconv.FormatUint(uint64(ag.ID), 10) + `}`
+	req := httptest.NewRequest(http.MethodPost, "/cases/"+caseIDStr+"/comments", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	var created supportcase.CaseComment
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if created.ID == 0 || created.Body != "Following up now" || created.AuthorAgentID == nil || *created.AuthorAgentID != ag.ID {
+		t.Errorf("created comment = %+v, want body 'Following up now' attributed to agent %d", created, ag.ID)
+	}
+
+	// Fetch the case; the new comment must be last, with its author populated.
+	greq := httptest.NewRequest(http.MethodGet, "/cases/"+caseIDStr, nil)
+	grec := httptest.NewRecorder()
+	router.ServeHTTP(grec, greq)
+	var got supportcase.Case
+	if err := json.Unmarshal(grec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode case: %v; body=%s", err, grec.Body.String())
+	}
+	if len(got.Comments) != 2 {
+		t.Fatalf("got %d comments, want 2; body=%s", len(got.Comments), grec.Body.String())
+	}
+	last := got.Comments[len(got.Comments)-1]
+	if last.Body != "Following up now" {
+		t.Errorf("last comment = %q, want the newly added 'Following up now'", last.Body)
+	}
+	if last.AuthorAgent == nil || last.AuthorAgent.Name != "Sam Carter" {
+		t.Errorf("comment author not populated: %+v", last.AuthorAgent)
+	}
+}
+
+func TestPostCaseCommentUnknownCaseReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+	body := `{"body":"hi","authorAgentId":1}`
+
+	req := httptest.NewRequest(http.MethodPost, "/cases/9999/comments", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
+func TestPostCaseCommentEmptyBodyReturns400(t *testing.T) {
+	db, router := newTestRouter(t)
+	kase := supportcase.Case{CustomerID: 1, Subject: "X", Category: supportcase.CategoryGeneral, Priority: supportcase.PriorityLow, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+	body := `{"body":"  ","authorAgentId":1}`
+
+	req := httptest.NewRequest(http.MethodPost, "/cases/"+strconv.FormatUint(uint64(kase.ID), 10)+"/comments", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestGetCaseReturnsCaseWithCommentsInChronologicalOrder(t *testing.T) {
 	db, router := newTestRouter(t)
 	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}

@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCase, type Case, API_BASE_URL } from "@/lib/api";
+import {
+  getCase,
+  getAgents,
+  type Case,
+  type Agent,
+  API_BASE_URL,
+} from "@/lib/api";
 import CaseDetail from "./CaseDetail";
+import AddCommentForm from "./AddCommentForm";
 
 export default async function CaseDetailPage({
   params,
@@ -27,6 +34,13 @@ export default async function CaseDetailPage({
     notFound();
   }
 
+  let agents: Agent[] = [];
+  try {
+    agents = await getAgents();
+  } catch {
+    agents = [];
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
       <Link
@@ -37,6 +51,9 @@ export default async function CaseDetailPage({
       </Link>
       <div className="mt-4">
         <CaseDetail caseItem={caseItem} />
+      </div>
+      <div className="mt-8">
+        <AddCommentForm caseId={caseItem.id} agents={agents} />
       </div>
     </main>
   );

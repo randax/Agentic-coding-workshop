@@ -21,9 +21,10 @@ var ErrNotFound = errors.New("case not found")
 // Validation errors returned by Create when a required field is missing or a
 // taxonomy value is not one of the predefined sets.
 var (
-	ErrSubjectRequired = errors.New("case subject is required")
-	ErrInvalidCategory = errors.New("invalid case category")
-	ErrInvalidPriority = errors.New("invalid case priority")
+	ErrSubjectRequired     = errors.New("case subject is required")
+	ErrInvalidCategory     = errors.New("invalid case category")
+	ErrInvalidPriority     = errors.New("invalid case priority")
+	ErrCommentBodyRequired = errors.New("comment body is required")
 )
 
 // Category is the kind of issue a case is about.
@@ -112,6 +113,8 @@ type Repository interface {
 	Get(ctx context.Context, id uint) (Case, error)
 	// Create inserts a new case, assigning its ID.
 	Create(ctx context.Context, c *Case) error
+	// CreateComment appends a comment to a case's timeline, assigning its ID.
+	CreateComment(ctx context.Context, cm *CaseComment) error
 }
 
 // Service owns support-case business logic.
@@ -146,6 +149,26 @@ func (c Case) validate() error {
 		return ErrInvalidPriority
 	}
 	return nil
+}
+
+// AddComment appends a comment to a case's timeline, attributed to the given
+// agent. The case must exist (else ErrNotFound) and the body must not be empty.
+func (s *Service) AddComment(ctx context.Context, caseID, authorAgentID uint, body string) (CaseComment, error) {
+	if strings.TrimSpace(body) == "" {
+		return CaseComment{}, ErrCommentBodyRequired
+	}
+	if _, err := s.repo.Get(ctx, caseID); err != nil {
+		return CaseComment{}, err
+	}
+	cm := CaseComment{
+		CaseID:        caseID,
+		Body:          body,
+		AuthorAgentID: &authorAgentID,
+	}
+	if err := s.repo.CreateComment(ctx, &cm); err != nil {
+		return CaseComment{}, err
+	}
+	return cm, nil
 }
 
 // Create opens a new case for a customer. New cases always start in the Open
