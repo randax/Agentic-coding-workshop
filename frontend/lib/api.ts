@@ -182,6 +182,22 @@ export async function addCaseComment(
   return res.json() as Promise<CaseComment>;
 }
 
+/** Advances a case to a new status. Rejected by the backend if the transition is illegal. */
+export async function updateCaseStatus(
+  caseId: string | number,
+  status: CaseStatus,
+): Promise<Case> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to change case status (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Case>;
+}
+
 /** Fetches a single case with its comment timeline. Returns null if not found. */
 export async function getCase(id: string | number): Promise<Case | null> {
   const res = await fetch(`${API_BASE_URL}/cases/${id}`, { cache: "no-store" });

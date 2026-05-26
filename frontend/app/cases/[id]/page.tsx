@@ -8,6 +8,7 @@ import {
   API_BASE_URL,
 } from "@/lib/api";
 import CaseDetail from "./CaseDetail";
+import CaseStatusControl from "./CaseStatusControl";
 import AddCommentForm from "./AddCommentForm";
 
 export default async function CaseDetailPage({
@@ -53,6 +54,9 @@ export default async function CaseDetailPage({
         <CaseDetail caseItem={caseItem} />
       </div>
       <div className="mt-8">
+        <CaseStatusControl caseId={caseItem.id} status={caseItem.status} />
+      </div>
+      <div className="mt-6">
         <AddCommentForm caseId={caseItem.id} agents={agents} />
       </div>
     </main>

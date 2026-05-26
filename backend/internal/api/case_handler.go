@@ -105,6 +105,42 @@ func (h *caseHandler) addComment(c *gin.Context) {
 	c.JSON(http.StatusCreated, comment)
 }
 
+// patchCaseRequest is the body of PATCH /cases/:id. For this slice only the
+// status is editable (priority/category/assignee arrive in a later slice).
+type patchCaseRequest struct {
+	Status supportcase.Status `json:"status"`
+}
+
+func (h *caseHandler) patch(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid case id"})
+		return
+	}
+	var req patchCaseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if req.Status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status is required"})
+		return
+	}
+	updated, err := h.svc.ChangeStatus(c.Request.Context(), uint(id), req.Status)
+	if err != nil {
+		switch {
+		case errors.Is(err, supportcase.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "case not found"})
+		case errors.Is(err, supportcase.ErrIllegalTransition):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update case"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, updated)
+}
+
 func (h *caseHandler) get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

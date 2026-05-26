@@ -43,6 +43,13 @@ func (r *CaseRepository) CreateComment(ctx context.Context, cm *supportcase.Case
 	return r.db.WithContext(ctx).Create(cm).Error
 }
 
+// Update persists changes to an existing case. It omits the associations so
+// saving a case never writes back to the assigned agent or rewrites the
+// comment timeline.
+func (r *CaseRepository) Update(ctx context.Context, c *supportcase.Case) error {
+	return r.db.WithContext(ctx).Omit("AssignedAgent", "Comments").Save(c).Error
+}
+
 // Get returns a single case with its assigned agent and its comment timeline
 // (oldest first, each comment's author preloaded), translating GORM's not-found
 // error into the domain-level supportcase.ErrNotFound.
