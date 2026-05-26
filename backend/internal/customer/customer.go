@@ -6,6 +6,7 @@ package customer
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -43,6 +44,15 @@ type Repository interface {
 	Get(ctx context.Context, id uint) (Customer, error)
 }
 
+// Filter narrows a customer list query. The zero value matches every customer.
+type Filter struct {
+	// Search is a partial, case-insensitive term matched against a customer's
+	// name, email, or account number. Empty matches all.
+	Search string
+	// Status restricts results to a single account status. Empty matches all.
+	Status Status
+}
+
 // Service owns customer business logic.
 type Service struct {
 	repo Repository
@@ -53,9 +63,35 @@ func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
 }
 
-// List returns all customers.
-func (s *Service) List(ctx context.Context) ([]Customer, error) {
-	return s.repo.List(ctx)
+// List returns the customers matching the filter. Filtering happens in the
+// service (not the database) so the matching logic is unit-testable in isolation.
+func (s *Service) List(ctx context.Context, f Filter) ([]Customer, error) {
+	all, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var matched []Customer
+	for _, c := range all {
+		if f.matches(c) {
+			matched = append(matched, c)
+		}
+	}
+	return matched, nil
+}
+
+// matches reports whether a customer satisfies the filter.
+func (f Filter) matches(c Customer) bool {
+	if f.Status != "" && c.Status != f.Status {
+		return false
+	}
+	if term := strings.ToLower(f.Search); term != "" {
+		if !strings.Contains(strings.ToLower(c.Name), term) &&
+			!strings.Contains(strings.ToLower(c.Email), term) &&
+			!strings.Contains(strings.ToLower(c.AccountNumber), term) {
+			return false
+		}
+	}
+	return true
 }
 
 // Get returns a single customer by ID, or ErrNotFound.

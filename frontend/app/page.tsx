@@ -1,21 +1,36 @@
-import Link from "next/link";
-import { getCustomers, type Customer, API_BASE_URL } from "@/lib/api";
-import { formatDate } from "@/lib/format";
-import StatusBadge from "@/components/StatusBadge";
+import {
+  getCustomers,
+  type Customer,
+  type CustomerStatus,
+  API_BASE_URL,
+} from "@/lib/api";
+import CustomerSearch from "./CustomerSearch";
+import CustomerTable from "./CustomerTable";
 
-export default async function CustomersPage() {
+/** Narrows a raw status query param to a valid CustomerStatus, or undefined. */
+function parseStatus(raw: string | undefined): CustomerStatus | undefined {
+  return raw === "active" || raw === "suspended" ? raw : undefined;
+}
+
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; status?: string }>;
+}) {
+  const { search, status } = await searchParams;
+
   let customers: Customer[] = [];
   let error: string | null = null;
 
   try {
-    customers = await getCustomers();
+    customers = await getCustomers({ search, status: parseStatus(status) });
   } catch {
     error = `Could not reach the CRM API at ${API_BASE_URL}. Is the backend running?`;
   }
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
-      <header className="mb-8">
+      <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           Customers
         </h1>
@@ -26,52 +41,16 @@ export default async function CustomersPage() {
         </p>
       </header>
 
+      <div className="mb-6">
+        <CustomerSearch />
+      </div>
+
       {error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           {error}
         </div>
-      ) : customers.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
-          No customers yet.
-        </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Account #</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Customer since</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {customers.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">
-                    <Link
-                      href={`/customers/${c.id}`}
-                      className="text-gray-900 hover:text-blue-700 hover:underline"
-                    >
-                      {c.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                    {c.accountNumber}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{c.email}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {formatDate(c.customerSince)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={c.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <CustomerTable customers={customers} />
       )}
     </main>
   );

@@ -61,7 +61,11 @@ type customerHandler struct {
 }
 
 func (h *customerHandler) list(c *gin.Context) {
-	customers, err := h.svc.List(c.Request.Context())
+	filter := customer.Filter{
+		Search: c.Query("search"),
+		Status: customer.Status(c.Query("status")),
+	}
+	customers, err := h.svc.List(c.Request.Context(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list customers"})
 		return

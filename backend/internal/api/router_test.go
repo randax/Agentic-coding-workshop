@@ -74,6 +74,60 @@ func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
 	}
 }
 
+func TestGetCustomersFiltersBySearchQueryParam(t *testing.T) {
+	db, router := newTestRouter(t)
+	db.Create(&customer.Customer{
+		Name: "Ada Lovelace", Email: "ada@analytical.example", AccountNumber: "ACME-001",
+		Status: customer.StatusActive, CustomerSince: time.Now(),
+	})
+	db.Create(&customer.Customer{
+		Name: "Alan Turing", Email: "alan@bletchley.example", AccountNumber: "GLOBEX-7",
+		Status: customer.StatusActive, CustomerSince: time.Now(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/customers?search=globex", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got []customer.Customer
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != 1 || got[0].Name != "Alan Turing" {
+		t.Fatalf("search=globex returned %+v, want only Alan Turing", got)
+	}
+}
+
+func TestGetCustomersFiltersByStatusQueryParam(t *testing.T) {
+	db, router := newTestRouter(t)
+	db.Create(&customer.Customer{
+		Name: "Ada Lovelace", AccountNumber: "ACME-001",
+		Status: customer.StatusActive, CustomerSince: time.Now(),
+	})
+	db.Create(&customer.Customer{
+		Name: "Alan Turing", AccountNumber: "ACME-002",
+		Status: customer.StatusSuspended, CustomerSince: time.Now(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/customers?status=suspended", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got []customer.Customer
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != 1 || got[0].Name != "Alan Turing" {
+		t.Fatalf("status=suspended returned %+v, want only Alan Turing", got)
+	}
+}
+
 func TestGetCustomerByIDReturnsCustomer(t *testing.T) {
 	db, router := newTestRouter(t)
 	c := customer.Customer{
