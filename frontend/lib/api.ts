@@ -166,6 +166,22 @@ export async function createCase(
   return res.json() as Promise<Case>;
 }
 
+/** Appends a comment to a case's timeline, attributed to the chosen agent. */
+export async function addCaseComment(
+  caseId: string | number,
+  input: { body: string; authorAgentId: number },
+): Promise<CaseComment> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to add comment (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<CaseComment>;
+}
+
 /** Fetches a single case with its comment timeline. Returns null if not found. */
 export async function getCase(id: string | number): Promise<Case | null> {
   const res = await fetch(`${API_BASE_URL}/cases/${id}`, { cache: "no-store" });

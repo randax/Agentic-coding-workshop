@@ -73,6 +73,38 @@ func (h *caseHandler) create(c *gin.Context) {
 	c.JSON(http.StatusCreated, created)
 }
 
+// addCommentRequest is the body of POST /cases/:id/comments.
+type addCommentRequest struct {
+	Body          string `json:"body"`
+	AuthorAgentID uint   `json:"authorAgentId"`
+}
+
+func (h *caseHandler) addComment(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid case id"})
+		return
+	}
+	var req addCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	comment, err := h.svc.AddComment(c.Request.Context(), uint(id), req.AuthorAgentID, req.Body)
+	if err != nil {
+		switch {
+		case errors.Is(err, supportcase.ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "case not found"})
+		case errors.Is(err, supportcase.ErrCommentBodyRequired):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add comment"})
+		}
+		return
+	}
+	c.JSON(http.StatusCreated, comment)
+}
+
 func (h *caseHandler) get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
