@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { Customer, Subscription, Product } from "@/lib/api";
+import type { Customer, Subscription, Product, Case } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import SubscriptionList from "./SubscriptionList";
+import CaseList from "./CaseList";
 
 export type TabKey = "profile" | "subscriptions" | "cases";
 
@@ -58,11 +59,13 @@ export default function CustomerDetail({
   activeTab,
   subscriptions = [],
   availableProducts = [],
+  cases = [],
 }: {
   customer: Customer;
   activeTab: TabKey;
   subscriptions?: Subscription[];
   availableProducts?: Product[];
+  cases?: Case[];
 }) {
   return (
     <div>
@@ -79,9 +82,7 @@ export default function CustomerDetail({
             availableProducts={availableProducts}
           />
         )}
-        {activeTab === "cases" && (
-          <Placeholder>No support cases to display yet.</Placeholder>
-        )}
+        {activeTab === "cases" && <CaseList cases={cases} />}
       </div>
     </div>
   );
@@ -107,10 +108,3 @@ function ProfilePanel({ customer }: { customer: Customer }) {
   );
 }
 
-function Placeholder({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
-      {children}
-    </div>
-  );
-}

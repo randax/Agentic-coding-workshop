@@ -10,10 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"ispcrm/internal/agent"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/store"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 
 	"gorm.io/gorm"
 )
@@ -34,7 +36,9 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
 	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db), products)
-	return db, NewRouter(customers, products, subscriptions)
+	agents := agent.NewService(store.NewAgentRepository(db))
+	cases := supportcase.NewService(store.NewCaseRepository(db))
+	return db, NewRouter(customers, products, subscriptions, agents, cases)
 }
 
 func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
@@ -72,6 +76,67 @@ func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
 		if !names[want] {
 			t.Errorf("expected customer %q in response", want)
 		}
+	}
+}
+
+func TestGetAgentsReturnsAgents(t *testing.T) {
+	db, router := newTestRouter(t)
+	db.Create(&agent.Agent{Name: "Sam Carter", Email: "sam@isp.example"})
+	db.Create(&agent.Agent{Name: "Robin Diaz", Email: "robin@isp.example"})
+
+	req := httptest.NewRequest(http.MethodGet, "/agents", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got []agent.Agent
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d agents, want 2; body=%s", len(got), rec.Body.String())
+	}
+}
+
+func TestGetCustomerCasesReturnsCasesWithAssignedAgent(t *testing.T) {
+	db, router := newTestRouter(t)
+	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&cust)
+	other := customer.Customer{Name: "Alan Turing", AccountNumber: "ISP-2", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&other)
+	ag := agent.Agent{Name: "Sam Carter", Email: "sam@isp.example"}
+	db.Create(&ag)
+
+	db.Omit("AssignedAgent").Create(&supportcase.Case{
+		CustomerID: cust.ID, Subject: "No internet", Category: supportcase.CategoryConnectivity,
+		Priority: supportcase.PriorityHigh, Status: supportcase.StatusOpen, AssignedAgentID: &ag.ID,
+	})
+	db.Omit("AssignedAgent").Create(&supportcase.Case{
+		CustomerID: other.ID, Subject: "Other customer's case", Category: supportcase.CategoryBilling,
+		Priority: supportcase.PriorityLow, Status: supportcase.StatusOpen,
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/customers/"+strconv.FormatUint(uint64(cust.ID), 10)+"/cases", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got []supportcase.Case
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d cases, want 1 (only this customer's); body=%s", len(got), rec.Body.String())
+	}
+	if got[0].Subject != "No internet" || got[0].Priority != supportcase.PriorityHigh {
+		t.Errorf("case = %+v, want subject 'No internet' priority high", got[0])
+	}
+	if got[0].AssignedAgent == nil || got[0].AssignedAgent.Name != "Sam Carter" {
+		t.Errorf("assigned agent not populated: %+v", got[0].AssignedAgent)
 	}
 }
 
