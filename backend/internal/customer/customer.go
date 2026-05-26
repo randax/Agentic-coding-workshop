@@ -5,8 +5,14 @@ package customer
 
 import (
 	"context"
+	"errors"
 	"time"
 )
+
+// ErrNotFound is returned when a requested customer does not exist. Repository
+// implementations translate storage-specific "not found" errors into this so
+// the rest of the app stays decoupled from the persistence layer.
+var ErrNotFound = errors.New("customer not found")
 
 // Status is a customer's account standing.
 type Status string
@@ -33,6 +39,8 @@ type Customer struct {
 // implementation lives in the store package; tests use an in-memory fake.
 type Repository interface {
 	List(ctx context.Context) ([]Customer, error)
+	// Get returns the customer with the given ID, or ErrNotFound.
+	Get(ctx context.Context, id uint) (Customer, error)
 }
 
 // Service owns customer business logic.
@@ -48,4 +56,9 @@ func NewService(repo Repository) *Service {
 // List returns all customers.
 func (s *Service) List(ctx context.Context) ([]Customer, error) {
 	return s.repo.List(ctx)
+}
+
+// Get returns a single customer by ID, or ErrNotFound.
+func (s *Service) Get(ctx context.Context, id uint) (Customer, error) {
+	return s.repo.Get(ctx, id)
 }

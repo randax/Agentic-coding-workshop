@@ -26,3 +26,19 @@ export async function getCustomers(): Promise<Customer[]> {
   }
   return res.json() as Promise<Customer[]>;
 }
+
+/** Fetches a single customer by id. Returns null if no such customer exists. */
+export async function getCustomer(
+  id: string | number,
+): Promise<Customer | null> {
+  const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw new Error(`Failed to load customer (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Customer>;
+}

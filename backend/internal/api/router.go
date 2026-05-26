@@ -3,7 +3,9 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
 
 	"ispcrm/internal/customer"
 
@@ -19,6 +21,7 @@ func NewRouter(customers *customer.Service) http.Handler {
 
 	h := &customerHandler{svc: customers}
 	r.GET("/customers", h.list)
+	r.GET("/customers/:id", h.get)
 
 	return r
 }
@@ -52,4 +55,22 @@ func (h *customerHandler) list(c *gin.Context) {
 		customers = []customer.Customer{}
 	}
 	c.JSON(http.StatusOK, customers)
+}
+
+func (h *customerHandler) get(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer id"})
+		return
+	}
+	cust, err := h.svc.Get(c.Request.Context(), uint(id))
+	if err != nil {
+		if errors.Is(err, customer.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get customer"})
+		return
+	}
+	c.JSON(http.StatusOK, cust)
 }
