@@ -8,20 +8,26 @@ import (
 	"strconv"
 
 	"ispcrm/internal/customer"
+	"ispcrm/internal/product"
 
 	"github.com/gin-gonic/gin"
 )
 
 // NewRouter builds the HTTP handler for the CRM API.
-func NewRouter(customers *customer.Service) http.Handler {
+func NewRouter(customers *customer.Service, products *product.Service) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(corsMiddleware())
 
-	h := &customerHandler{svc: customers}
-	r.GET("/customers", h.list)
-	r.GET("/customers/:id", h.get)
+	ch := &customerHandler{svc: customers}
+	r.GET("/customers", ch.list)
+	r.GET("/customers/:id", ch.get)
+
+	ph := &productHandler{svc: products}
+	r.GET("/products", ph.list)
+	r.POST("/products", ph.create)
+	r.POST("/products/:id/retire", ph.retire)
 
 	return r
 }

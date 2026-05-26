@@ -15,6 +15,19 @@ export interface Customer {
   status: CustomerStatus;
 }
 
+export type ProductCategory = "fiber" | "router" | "tv";
+
+export interface Product {
+  id: number;
+  name: string;
+  category: ProductCategory;
+  monthlyPrice: number;
+  available: boolean;
+  speedMbps?: number;
+  routerModel?: string;
+  tvPackageTier?: string;
+}
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -25,6 +38,15 @@ export async function getCustomers(): Promise<Customer[]> {
     throw new Error(`Failed to load customers (HTTP ${res.status})`);
   }
   return res.json() as Promise<Customer[]>;
+}
+
+/** Fetches the product catalog. Data is always fresh (uncached). */
+export async function getProducts(): Promise<Product[]> {
+  const res = await fetch(`${API_BASE_URL}/products`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Failed to load products (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Product[]>;
 }
 
 /** Fetches a single customer by id. Returns null if no such customer exists. */

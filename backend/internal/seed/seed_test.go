@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"ispcrm/internal/customer"
+	"ispcrm/internal/product"
 	"ispcrm/internal/seed"
 	"ispcrm/internal/store"
 
@@ -39,6 +40,24 @@ func TestDemoSeedsCustomersIntoEmptyDB(t *testing.T) {
 
 	if n := countCustomers(t, db); n < 2 {
 		t.Fatalf("after seeding got %d customers, want at least 2", n)
+	}
+}
+
+func TestDemoSeedsProductsCoveringEveryCategory(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	for _, cat := range []product.Category{
+		product.CategoryFiber, product.CategoryRouter, product.CategoryTV,
+	} {
+		var n int64
+		db.Model(&product.Product{}).Where("category = ?", cat).Count(&n)
+		if n == 0 {
+			t.Errorf("expected at least one seeded product in category %q", cat)
+		}
 	}
 }
 

@@ -6,3 +6,9 @@ export function formatDate(iso: string): string {
     day: "numeric",
   });
 }
+
+/** Formats a monthly price in NOK (e.g. "kr 499 / mo"). */
+export function formatMonthlyPrice(amount: number): string {
+  const rounded = Number.isInteger(amount) ? amount : amount.toFixed(2);
+  return `kr ${rounded} / mo`;
+}

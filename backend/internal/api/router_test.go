@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ispcrm/internal/customer"
+	"ispcrm/internal/product"
 	"ispcrm/internal/store"
 
 	"gorm.io/gorm"
@@ -28,8 +29,9 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	if err := store.Migrate(db); err != nil {
 		t.Fatalf("migrate test db: %v", err)
 	}
-	svc := customer.NewService(store.NewCustomerRepository(db))
-	return db, NewRouter(svc)
+	customers := customer.NewService(store.NewCustomerRepository(db))
+	products := product.NewService(store.NewProductRepository(db))
+	return db, NewRouter(customers, products)
 }
 
 func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
