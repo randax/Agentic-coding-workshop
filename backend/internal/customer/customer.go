@@ -15,6 +15,15 @@ import (
 // the rest of the app stays decoupled from the persistence layer.
 var ErrNotFound = errors.New("customer not found")
 
+// Validation errors returned by Create and Update when required fields are
+// missing or the account status is not a known value.
+var (
+	ErrNameRequired          = errors.New("customer name is required")
+	ErrEmailRequired         = errors.New("customer email is required")
+	ErrAccountNumberRequired = errors.New("customer account number is required")
+	ErrInvalidStatus         = errors.New("invalid customer status")
+)
+
 // Status is a customer's account standing.
 type Status string
 
@@ -22,6 +31,16 @@ const (
 	StatusActive    Status = "active"
 	StatusSuspended Status = "suspended"
 )
+
+// Valid reports whether s is a known account status.
+func (s Status) Valid() bool {
+	switch s {
+	case StatusActive, StatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
 
 // Customer is a residential ISP customer. Struct tags configure GORM and JSON
 // but the package itself does not import GORM, keeping the domain layer clean.
@@ -42,6 +61,10 @@ type Repository interface {
 	List(ctx context.Context) ([]Customer, error)
 	// Get returns the customer with the given ID, or ErrNotFound.
 	Get(ctx context.Context, id uint) (Customer, error)
+	// Create inserts a new customer, assigning its ID.
+	Create(ctx context.Context, c *Customer) error
+	// Update persists all fields of an existing customer.
+	Update(ctx context.Context, c *Customer) error
 }
 
 // Filter narrows a customer list query. The zero value matches every customer.
@@ -97,4 +120,63 @@ func (f Filter) matches(c Customer) bool {
 // Get returns a single customer by ID, or ErrNotFound.
 func (s *Service) Get(ctx context.Context, id uint) (Customer, error) {
 	return s.repo.Get(ctx, id)
+}
+
+// validate enforces the required-field and status rules shared by Create and Update.
+func (c Customer) validate() error {
+	if strings.TrimSpace(c.Name) == "" {
+		return ErrNameRequired
+	}
+	if strings.TrimSpace(c.Email) == "" {
+		return ErrEmailRequired
+	}
+	if strings.TrimSpace(c.AccountNumber) == "" {
+		return ErrAccountNumberRequired
+	}
+	if !c.Status.Valid() {
+		return ErrInvalidStatus
+	}
+	return nil
+}
+
+// Create adds a new customer. A new customer defaults to active status unless
+// another valid status is given.
+func (s *Service) Create(ctx context.Context, c Customer) (Customer, error) {
+	if c.Status == "" {
+		c.Status = StatusActive
+	}
+	if err := c.validate(); err != nil {
+		return Customer{}, err
+	}
+	if c.CustomerSince.IsZero() {
+		c.CustomerSince = time.Now()
+	}
+	c.ID = 0 // the repository assigns identifiers
+	if err := s.repo.Create(ctx, &c); err != nil {
+		return Customer{}, err
+	}
+	return c, nil
+}
+
+// Update edits an existing customer's profile fields and status. Server-managed
+// fields (CustomerSince) are preserved by loading the existing record first;
+// an unknown ID yields ErrNotFound.
+func (s *Service) Update(ctx context.Context, c Customer) (Customer, error) {
+	existing, err := s.repo.Get(ctx, c.ID)
+	if err != nil {
+		return Customer{}, err
+	}
+	existing.Name = c.Name
+	existing.Email = c.Email
+	existing.Phone = c.Phone
+	existing.ServiceAddress = c.ServiceAddress
+	existing.AccountNumber = c.AccountNumber
+	existing.Status = c.Status
+	if err := existing.validate(); err != nil {
+		return Customer{}, err
+	}
+	if err := s.repo.Update(ctx, &existing); err != nil {
+		return Customer{}, err
+	}
+	return existing, nil
 }

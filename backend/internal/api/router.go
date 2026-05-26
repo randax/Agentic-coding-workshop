@@ -27,7 +27,9 @@ func NewRouter(
 
 	ch := &customerHandler{svc: customers}
 	r.GET("/customers", ch.list)
+	r.POST("/customers", ch.create)
 	r.GET("/customers/:id", ch.get)
+	r.PUT("/customers/:id", ch.update)
 
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)
@@ -77,6 +79,33 @@ func (h *customerHandler) list(c *gin.Context) {
 	c.JSON(http.StatusOK, customers)
 }
 
+// isValidationError reports whether err is one of the customer service's
+// required-field or status validation errors (which map to HTTP 400).
+func isValidationError(err error) bool {
+	return errors.Is(err, customer.ErrNameRequired) ||
+		errors.Is(err, customer.ErrEmailRequired) ||
+		errors.Is(err, customer.ErrAccountNumberRequired) ||
+		errors.Is(err, customer.ErrInvalidStatus)
+}
+
+func (h *customerHandler) create(c *gin.Context) {
+	var cust customer.Customer
+	if err := c.ShouldBindJSON(&cust); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	created, err := h.svc.Create(c.Request.Context(), cust)
+	if err != nil {
+		if isValidationError(err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create customer"})
+		return
+	}
+	c.JSON(http.StatusCreated, created)
+}
+
 func (h *customerHandler) get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -93,4 +122,32 @@ func (h *customerHandler) get(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, cust)
+}
+
+func (h *customerHandler) update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid customer id"})
+		return
+	}
+	var cust customer.Customer
+	if err := c.ShouldBindJSON(&cust); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	cust.ID = uint(id) // the URL is the source of truth for which customer to edit
+	updated, err := h.svc.Update(c.Request.Context(), cust)
+	if err != nil {
+		if errors.Is(err, customer.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
+			return
+		}
+		if isValidationError(err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update customer"})
+		return
+	}
+	c.JSON(http.StatusOK, updated)
 }

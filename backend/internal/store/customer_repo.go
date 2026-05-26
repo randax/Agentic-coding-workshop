@@ -40,3 +40,13 @@ func (r *CustomerRepository) Get(ctx context.Context, id uint) (customer.Custome
 	}
 	return c, nil
 }
+
+// Create inserts a new customer.
+func (r *CustomerRepository) Create(ctx context.Context, c *customer.Customer) error {
+	return r.db.WithContext(ctx).Create(c).Error
+}
+
+// Update persists all fields of an existing customer.
+func (r *CustomerRepository) Update(ctx context.Context, c *customer.Customer) error {
+	return r.db.WithContext(ctx).Save(c).Error
+}

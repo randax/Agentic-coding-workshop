@@ -63,12 +63,17 @@ export default async function CustomerDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
-      <Link
-        href="/"
-        className="text-sm text-gray-500 hover:text-gray-800"
-      >
-        ← Customers
-      </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-800">
+          ← Customers
+        </Link>
+        <Link
+          href={`/customers/${customer.id}/edit`}
+          className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        >
+          Edit
+        </Link>
+      </div>
       <div className="mt-4">
         <CustomerDetail
           customer={customer}
