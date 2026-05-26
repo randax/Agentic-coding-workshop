@@ -38,7 +38,9 @@ func NewRouter(
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)
 	r.POST("/products", ph.create)
+	r.PUT("/products/:id", ph.update)
 	r.POST("/products/:id/retire", ph.retire)
+	r.POST("/products/:id/unretire", ph.unretire)
 
 	sh := &subscriptionHandler{svc: subscriptions}
 	r.GET("/customers/:id/subscriptions", sh.listForCustomer)

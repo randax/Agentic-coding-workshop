@@ -111,6 +111,67 @@ export async function getCustomers(
   return res.json() as Promise<Customer[]>;
 }
 
+/** Editable product fields, sent to the backend on create and edit. The
+ * per-category attribute is optional and only meaningful for its category. */
+export interface ProductInput {
+  name: string;
+  category: ProductCategory;
+  monthlyPrice: number;
+  speedMbps?: number;
+  routerModel?: string;
+  tvPackageTier?: string;
+}
+
+/** Creates a new product in the catalog. New products are available. */
+export async function createProduct(input: ProductInput): Promise<Product> {
+  const res = await fetch(`${API_BASE_URL}/products`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to create product (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Product>;
+}
+
+/** Edits an existing product's catalog fields. Availability is server-managed
+ * (via retire/unretire) and unaffected by edits. */
+export async function updateProduct(
+  id: string | number,
+  input: ProductInput,
+): Promise<Product> {
+  const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to update product (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Product>;
+}
+
+/** Retires a product so it can no longer be subscribed to. */
+export async function retireProduct(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/products/${id}/retire`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to retire product (HTTP ${res.status})`);
+  }
+}
+
+/** Reactivates a retired product so it can be subscribed to again. */
+export async function unretireProduct(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/products/${id}/unretire`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to unretire product (HTTP ${res.status})`);
+  }
+}
+
 /** Fetches the product catalog. Data is always fresh (uncached). */
 export async function getProducts(): Promise<Product[]> {
   const res = await fetch(`${API_BASE_URL}/products`, { cache: "no-store" });
