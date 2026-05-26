@@ -52,6 +52,7 @@ func NewRouter(
 	r.GET("/customers/:id/cases", caseH.listForCustomer)
 	r.POST("/customers/:id/cases", caseH.create)
 	r.GET("/cases/:id", caseH.get)
+	r.PATCH("/cases/:id", caseH.patch)
 	r.POST("/cases/:id/comments", caseH.addComment)
 
 	return r

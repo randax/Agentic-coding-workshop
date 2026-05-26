@@ -145,6 +145,63 @@ func TestPostCustomerCaseInvalidCategoryReturns400(t *testing.T) {
 	}
 }
 
+func patchCaseStatus(t *testing.T, router http.Handler, caseID uint, status string) *httptest.ResponseRecorder {
+	t.Helper()
+	body := `{"status":"` + status + `"}`
+	req := httptest.NewRequest(http.MethodPatch, "/cases/"+strconv.FormatUint(uint64(caseID), 10), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestPatchCaseChangesStatus(t *testing.T) {
+	db, router := newTestRouter(t)
+	kase := supportcase.Case{CustomerID: 1, Subject: "No internet", Category: supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+
+	rec := patchCaseStatus(t, router, kase.ID, "in_progress")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got supportcase.Case
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.Status != supportcase.StatusInProgress {
+		t.Errorf("status = %q, want %q", got.Status, supportcase.StatusInProgress)
+	}
+	// Confirm it persisted.
+	var reloaded supportcase.Case
+	db.First(&reloaded, kase.ID)
+	if reloaded.Status != supportcase.StatusInProgress {
+		t.Errorf("persisted status = %q, want %q", reloaded.Status, supportcase.StatusInProgress)
+	}
+}
+
+func TestPatchCaseIllegalTransitionReturns409(t *testing.T) {
+	db, router := newTestRouter(t)
+	kase := supportcase.Case{CustomerID: 1, Subject: "No internet", Category: supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+
+	rec := patchCaseStatus(t, router, kase.ID, "closed") // open → closed is illegal
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusConflict, rec.Body.String())
+	}
+}
+
+func TestPatchCaseUnknownReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+
+	rec := patchCaseStatus(t, router, 9999, "in_progress")
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
 func TestPostCaseCommentAppendsToTimeline(t *testing.T) {
 	db, router := newTestRouter(t)
 	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}

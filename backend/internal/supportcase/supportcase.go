@@ -25,6 +25,7 @@ var (
 	ErrInvalidCategory     = errors.New("invalid case category")
 	ErrInvalidPriority     = errors.New("invalid case priority")
 	ErrCommentBodyRequired = errors.New("comment body is required")
+	ErrIllegalTransition   = errors.New("illegal case status transition")
 )
 
 // Category is the kind of issue a case is about.
@@ -57,6 +58,27 @@ const (
 	PriorityHigh   Priority = "high"
 	PriorityUrgent Priority = "urgent"
 )
+
+// allowedTransitions is the case lifecycle state machine: for each status, the
+// set of statuses it may move to. The forward path is Open → In-progress →
+// Resolved → Closed; a Resolved case may be reopened to In-progress; Closed is
+// terminal. Any pair not listed here (including a status to itself) is illegal.
+var allowedTransitions = map[Status][]Status{
+	StatusOpen:       {StatusInProgress},
+	StatusInProgress: {StatusResolved},
+	StatusResolved:   {StatusClosed, StatusInProgress},
+	StatusClosed:     {}, // terminal
+}
+
+// canTransition reports whether moving from one status to another is legal.
+func canTransition(from, to Status) bool {
+	for _, s := range allowedTransitions[from] {
+		if s == to {
+			return true
+		}
+	}
+	return false
+}
 
 // Valid reports whether p is one of the predefined case priorities.
 func (p Priority) Valid() bool {
@@ -115,6 +137,8 @@ type Repository interface {
 	Create(ctx context.Context, c *Case) error
 	// CreateComment appends a comment to a case's timeline, assigning its ID.
 	CreateComment(ctx context.Context, cm *CaseComment) error
+	// Update persists changes to an existing case.
+	Update(ctx context.Context, c *Case) error
 }
 
 // Service owns support-case business logic.
@@ -169,6 +193,24 @@ func (s *Service) AddComment(ctx context.Context, caseID, authorAgentID uint, bo
 		return CaseComment{}, err
 	}
 	return cm, nil
+}
+
+// ChangeStatus advances a case to a new status, enforcing the lifecycle state
+// machine. An unknown case yields ErrNotFound; a move that is not a legal
+// transition yields ErrIllegalTransition.
+func (s *Service) ChangeStatus(ctx context.Context, id uint, to Status) (Case, error) {
+	existing, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return Case{}, err
+	}
+	if !canTransition(existing.Status, to) {
+		return Case{}, ErrIllegalTransition
+	}
+	existing.Status = to
+	if err := s.repo.Update(ctx, &existing); err != nil {
+		return Case{}, err
+	}
+	return existing, nil
 }
 
 // Create opens a new case for a customer. New cases always start in the Open

@@ -57,6 +57,19 @@ func (f *fakeRepo) CreateComment(ctx context.Context, cm *CaseComment) error {
 	return nil
 }
 
+func (f *fakeRepo) Update(ctx context.Context, c *Case) error {
+	if f.err != nil {
+		return f.err
+	}
+	for i := range f.cases {
+		if f.cases[i].ID == c.ID {
+			f.cases[i] = *c
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 func (f *fakeRepo) Create(ctx context.Context, c *Case) error {
 	if f.err != nil {
 		return f.err
@@ -232,6 +245,82 @@ func TestAddCommentToUnknownCaseReturnsNotFound(t *testing.T) {
 	_, err := svc.AddComment(context.Background(), 999, 1, "Hello")
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("AddComment error = %v, want ErrNotFound", err)
+	}
+}
+
+func TestChangeStatusAdvancesOpenToInProgress(t *testing.T) {
+	repo := &fakeRepo{cases: []Case{{ID: 5, CustomerID: 7, Subject: "No internet", Status: StatusOpen}}}
+	svc := NewService(repo)
+
+	got, err := svc.ChangeStatus(context.Background(), 5, StatusInProgress)
+	if err != nil {
+		t.Fatalf("ChangeStatus returned unexpected error: %v", err)
+	}
+	if got.Status != StatusInProgress {
+		t.Errorf("status = %q, want %q", got.Status, StatusInProgress)
+	}
+	if repo.cases[0].Status != StatusInProgress {
+		t.Errorf("persisted status = %q, want %q", repo.cases[0].Status, StatusInProgress)
+	}
+}
+
+func TestChangeStatusAllowsEveryLegalTransition(t *testing.T) {
+	legal := []struct{ from, to Status }{
+		{StatusOpen, StatusInProgress},
+		{StatusInProgress, StatusResolved},
+		{StatusResolved, StatusClosed},
+		{StatusResolved, StatusInProgress}, // reopen
+	}
+	for _, tc := range legal {
+		t.Run(string(tc.from)+"_to_"+string(tc.to), func(t *testing.T) {
+			repo := &fakeRepo{cases: []Case{{ID: 1, Status: tc.from}}}
+			svc := NewService(repo)
+
+			got, err := svc.ChangeStatus(context.Background(), 1, tc.to)
+			if err != nil {
+				t.Fatalf("ChangeStatus(%s→%s) returned error: %v", tc.from, tc.to, err)
+			}
+			if got.Status != tc.to {
+				t.Errorf("status = %q, want %q", got.Status, tc.to)
+			}
+		})
+	}
+}
+
+func TestChangeStatusRejectsIllegalTransitions(t *testing.T) {
+	illegal := []struct{ from, to Status }{
+		{StatusOpen, StatusResolved},      // skip In-progress
+		{StatusOpen, StatusClosed},        // skip to terminal
+		{StatusInProgress, StatusOpen},    // backward
+		{StatusInProgress, StatusClosed},  // skip Resolved
+		{StatusResolved, StatusOpen},      // backward past In-progress
+		{StatusClosed, StatusInProgress},  // Closed is terminal
+		{StatusClosed, StatusResolved},    // Closed is terminal
+		{StatusOpen, StatusOpen},          // same-status is not a transition
+		{StatusResolved, Status("bogus")}, // unknown target
+	}
+	for _, tc := range illegal {
+		t.Run(string(tc.from)+"_to_"+string(tc.to), func(t *testing.T) {
+			repo := &fakeRepo{cases: []Case{{ID: 1, Status: tc.from}}}
+			svc := NewService(repo)
+
+			_, err := svc.ChangeStatus(context.Background(), 1, tc.to)
+			if !errors.Is(err, ErrIllegalTransition) {
+				t.Fatalf("ChangeStatus(%s→%s) error = %v, want ErrIllegalTransition", tc.from, tc.to, err)
+			}
+			if repo.cases[0].Status != tc.from {
+				t.Errorf("status changed to %q on an illegal transition; want unchanged %q", repo.cases[0].Status, tc.from)
+			}
+		})
+	}
+}
+
+func TestChangeStatusUnknownCaseReturnsNotFound(t *testing.T) {
+	svc := NewService(&fakeRepo{})
+
+	_, err := svc.ChangeStatus(context.Background(), 999, StatusInProgress)
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ChangeStatus error = %v, want ErrNotFound", err)
 	}
 }
 
