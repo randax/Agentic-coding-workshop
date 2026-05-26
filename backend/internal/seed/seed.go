@@ -9,6 +9,7 @@ import (
 
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
+	"ispcrm/internal/subscription"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +20,10 @@ func Demo(db *gorm.DB) error {
 	if err := seedCustomers(db); err != nil {
 		return err
 	}
-	return seedProducts(db)
+	if err := seedProducts(db); err != nil {
+		return err
+	}
+	return seedSubscriptions(db)
 }
 
 func seedCustomers(db *gorm.DB) error {
@@ -85,4 +89,71 @@ func seedProducts(db *gorm.DB) error {
 		{Name: "TV Premium", Category: product.CategoryTV, MonthlyPrice: 399, Available: true, TvPackageTier: &tvPremium},
 	}
 	return db.Create(&products).Error
+}
+
+func seedSubscriptions(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&subscription.Subscription{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var customers []customer.Customer
+	if err := db.Order("id").Find(&customers).Error; err != nil {
+		return err
+	}
+	var products []product.Product
+	if err := db.Order("id").Find(&products).Error; err != nil {
+		return err
+	}
+	if len(customers) == 0 || len(products) == 0 {
+		return nil
+	}
+
+	// First product seen per category, for convenient linking.
+	byCat := map[product.Category]product.Product{}
+	for _, p := range products {
+		if _, ok := byCat[p.Category]; !ok {
+			byCat[p.Category] = p
+		}
+	}
+
+	start := time.Now().AddDate(-1, 0, 0)
+	ended := time.Now().AddDate(0, -2, 0)
+
+	var subs []subscription.Subscription
+	if fiber, ok := byCat[product.CategoryFiber]; ok {
+		subs = append(subs, subscription.Subscription{
+			CustomerID: customers[0].ID, ProductID: fiber.ID, Status: subscription.StatusActive,
+			StartDate: start, MonthlyPriceSnapshot: fiber.MonthlyPrice, Quantity: 1,
+		})
+	}
+	if router, ok := byCat[product.CategoryRouter]; ok {
+		subs = append(subs, subscription.Subscription{
+			CustomerID: customers[0].ID, ProductID: router.ID, Status: subscription.StatusActive,
+			StartDate: start, MonthlyPriceSnapshot: router.MonthlyPrice, Quantity: 2,
+		})
+	}
+	if len(customers) > 1 {
+		if tv, ok := byCat[product.CategoryTV]; ok {
+			subs = append(subs, subscription.Subscription{
+				CustomerID: customers[1].ID, ProductID: tv.ID, Status: subscription.StatusActive,
+				StartDate: start, MonthlyPriceSnapshot: tv.MonthlyPrice, Quantity: 1,
+			})
+		}
+		if fiber, ok := byCat[product.CategoryFiber]; ok {
+			subs = append(subs, subscription.Subscription{
+				CustomerID: customers[1].ID, ProductID: fiber.ID, Status: subscription.StatusCancelled,
+				StartDate: start, EndDate: &ended, MonthlyPriceSnapshot: fiber.MonthlyPrice, Quantity: 1,
+			})
+		}
+	}
+
+	if len(subs) == 0 {
+		return nil
+	}
+	// Omit the Product association so GORM persists only the FK, never a phantom product.
+	return db.Omit("Product").Create(&subs).Error
 }

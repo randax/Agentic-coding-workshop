@@ -1,7 +1,8 @@
 import Link from "next/link";
-import type { Customer } from "@/lib/api";
+import type { Customer, Subscription } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
+import SubscriptionList from "./SubscriptionList";
 
 export type TabKey = "profile" | "subscriptions" | "cases";
 
@@ -55,9 +56,11 @@ function Field({ label, value }: { label: string; value: string }) {
 export default function CustomerDetail({
   customer,
   activeTab,
+  subscriptions = [],
 }: {
   customer: Customer;
   activeTab: TabKey;
+  subscriptions?: Subscription[];
 }) {
   return (
     <div>
@@ -68,7 +71,7 @@ export default function CustomerDetail({
       <div className="mt-6">
         {activeTab === "profile" && <ProfilePanel customer={customer} />}
         {activeTab === "subscriptions" && (
-          <Placeholder>No subscriptions to display yet.</Placeholder>
+          <SubscriptionList subscriptions={subscriptions} />
         )}
         {activeTab === "cases" && (
           <Placeholder>No support cases to display yet.</Placeholder>

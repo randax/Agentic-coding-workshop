@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCustomer, API_BASE_URL } from "@/lib/api";
+import {
+  getCustomer,
+  getCustomerSubscriptions,
+  type Subscription,
+  API_BASE_URL,
+} from "@/lib/api";
 import CustomerDetail, { type TabKey } from "./CustomerDetail";
 
 const VALID_TABS: TabKey[] = ["profile", "subscriptions", "cases"];
@@ -36,6 +41,16 @@ export default async function CustomerDetailPage({
     notFound();
   }
 
+  // Only the Subscriptions tab needs this data; fetch it lazily.
+  let subscriptions: Subscription[] = [];
+  if (activeTab === "subscriptions") {
+    try {
+      subscriptions = await getCustomerSubscriptions(id);
+    } catch {
+      subscriptions = [];
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
       <Link
@@ -45,7 +60,11 @@ export default async function CustomerDetailPage({
         ← Customers
       </Link>
       <div className="mt-4">
-        <CustomerDetail customer={customer} activeTab={activeTab} />
+        <CustomerDetail
+          customer={customer}
+          activeTab={activeTab}
+          subscriptions={subscriptions}
+        />
       </div>
     </main>
   );

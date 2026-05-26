@@ -8,6 +8,7 @@ import (
 	"ispcrm/internal/product"
 	"ispcrm/internal/seed"
 	"ispcrm/internal/store"
+	"ispcrm/internal/subscription"
 
 	"gorm.io/gorm"
 )
@@ -57,6 +58,28 @@ func TestDemoSeedsProductsCoveringEveryCategory(t *testing.T) {
 		db.Model(&product.Product{}).Where("category = ?", cat).Count(&n)
 		if n == 0 {
 			t.Errorf("expected at least one seeded product in category %q", cat)
+		}
+	}
+}
+
+func TestDemoSeedsSubscriptionsLinkingCustomersToProducts(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var subs []subscription.Subscription
+	db.Find(&subs)
+	if len(subs) == 0 {
+		t.Fatal("expected demo subscriptions to be seeded")
+	}
+	for _, s := range subs {
+		if s.CustomerID == 0 || s.ProductID == 0 {
+			t.Errorf("seeded subscription %d must reference a customer and product: %+v", s.ID, s)
+		}
+		if s.MonthlyPriceSnapshot == 0 || s.Quantity == 0 {
+			t.Errorf("seeded subscription %d must have a price snapshot and quantity: %+v", s.ID, s)
 		}
 	}
 }

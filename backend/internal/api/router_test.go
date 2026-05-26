@@ -12,6 +12,7 @@ import (
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/store"
+	"ispcrm/internal/subscription"
 
 	"gorm.io/gorm"
 )
@@ -31,7 +32,8 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	}
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
-	return db, NewRouter(customers, products)
+	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db))
+	return db, NewRouter(customers, products, subscriptions)
 }
 
 func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
