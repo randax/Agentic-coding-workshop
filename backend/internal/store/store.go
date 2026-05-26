@@ -4,9 +4,11 @@
 package store
 
 import (
+	"ispcrm/internal/agent"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -23,5 +25,11 @@ func Open(dsn string) (*gorm.DB, error) {
 
 // Migrate creates/updates the schema for all domain models.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(&customer.Customer{}, &product.Product{}, &subscription.Subscription{})
+	return db.AutoMigrate(
+		&customer.Customer{},
+		&product.Product{},
+		&subscription.Subscription{},
+		&agent.Agent{},
+		&supportcase.Case{},
+	)
 }

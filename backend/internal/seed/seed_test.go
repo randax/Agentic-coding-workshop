@@ -4,11 +4,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ispcrm/internal/agent"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/seed"
 	"ispcrm/internal/store"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 
 	"gorm.io/gorm"
 )
@@ -41,6 +43,20 @@ func TestDemoSeedsCustomersIntoEmptyDB(t *testing.T) {
 
 	if n := countCustomers(t, db); n < 2 {
 		t.Fatalf("after seeding got %d customers, want at least 2", n)
+	}
+}
+
+func TestDemoSeedsAgents(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var n int64
+	db.Model(&agent.Agent{}).Count(&n)
+	if n < 2 {
+		t.Fatalf("after seeding got %d agents, want at least 2", n)
 	}
 }
 
@@ -81,6 +97,34 @@ func TestDemoSeedsSubscriptionsLinkingCustomersToProducts(t *testing.T) {
 		if s.MonthlyPriceSnapshot == 0 || s.Quantity == 0 {
 			t.Errorf("seeded subscription %d must have a price snapshot and quantity: %+v", s.ID, s)
 		}
+	}
+}
+
+func TestDemoSeedsCasesLinkedToCustomersAndAgents(t *testing.T) {
+	db := freshDB(t)
+
+	if err := seed.Demo(db); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	var cases []supportcase.Case
+	db.Find(&cases)
+	if len(cases) == 0 {
+		t.Fatal("expected demo cases to be seeded")
+	}
+	for _, c := range cases {
+		if c.CustomerID == 0 {
+			t.Errorf("seeded case %d must reference a customer: %+v", c.ID, c)
+		}
+		if c.Subject == "" || c.Status == "" || c.Priority == "" || c.Category == "" {
+			t.Errorf("seeded case %d must have subject and taxonomy fields set: %+v", c.ID, c)
+		}
+	}
+
+	var assigned int64
+	db.Model(&supportcase.Case{}).Where("assigned_agent_id IS NOT NULL").Count(&assigned)
+	if assigned == 0 {
+		t.Error("expected at least one seeded case assigned to an agent")
 	}
 }
 

@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"ispcrm/internal/agent"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +21,8 @@ func NewRouter(
 	customers *customer.Service,
 	products *product.Service,
 	subscriptions *subscription.Service,
+	agents *agent.Service,
+	cases *supportcase.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -40,6 +44,12 @@ func NewRouter(
 	r.GET("/customers/:id/subscriptions", sh.listForCustomer)
 	r.POST("/customers/:id/subscriptions", sh.assign)
 	r.POST("/subscriptions/:id/cancel", sh.cancel)
+
+	ah := &agentHandler{svc: agents}
+	r.GET("/agents", ah.list)
+
+	caseH := &caseHandler{svc: cases}
+	r.GET("/customers/:id/cases", caseH.listForCustomer)
 
 	return r
 }

@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import {
   getCustomer,
   getCustomerSubscriptions,
+  getCustomerCases,
   getProducts,
   type Subscription,
   type Product,
+  type Case,
   API_BASE_URL,
 } from "@/lib/api";
 import CustomerDetail, { type TabKey } from "./CustomerDetail";
@@ -61,6 +63,16 @@ export default async function CustomerDetailPage({
     }
   }
 
+  // The Cases tab lists the customer's support cases.
+  let cases: Case[] = [];
+  if (activeTab === "cases") {
+    try {
+      cases = await getCustomerCases(id);
+    } catch {
+      cases = [];
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
       <div className="flex items-center justify-between gap-4">
@@ -80,6 +92,7 @@ export default async function CustomerDetailPage({
           activeTab={activeTab}
           subscriptions={subscriptions}
           availableProducts={availableProducts}
+          cases={cases}
         />
       </div>
     </main>

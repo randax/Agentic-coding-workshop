@@ -7,9 +7,11 @@ package seed
 import (
 	"time"
 
+	"ispcrm/internal/agent"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 
 	"gorm.io/gorm"
 )
@@ -23,7 +25,91 @@ func Demo(db *gorm.DB) error {
 	if err := seedProducts(db); err != nil {
 		return err
 	}
-	return seedSubscriptions(db)
+	if err := seedSubscriptions(db); err != nil {
+		return err
+	}
+	if err := seedAgents(db); err != nil {
+		return err
+	}
+	return seedCases(db)
+}
+
+func seedAgents(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&agent.Agent{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	agents := []agent.Agent{
+		{Name: "Sam Carter", Email: "sam@isp.example"},
+		{Name: "Robin Diaz", Email: "robin@isp.example"},
+		{Name: "Lee Nakamura", Email: "lee@isp.example"},
+	}
+	return db.Create(&agents).Error
+}
+
+func seedCases(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&supportcase.Case{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var customers []customer.Customer
+	if err := db.Order("id").Find(&customers).Error; err != nil {
+		return err
+	}
+	var agents []agent.Agent
+	if err := db.Order("id").Find(&agents).Error; err != nil {
+		return err
+	}
+	if len(customers) == 0 || len(agents) == 0 {
+		return nil
+	}
+
+	agentID := func(i int) *uint {
+		id := agents[i%len(agents)].ID
+		return &id
+	}
+
+	cases := []supportcase.Case{
+		{
+			CustomerID: customers[0].ID, Subject: "No internet since this morning",
+			Description: "Connection dropped around 08:00 and has not come back.",
+			Category:    supportcase.CategoryConnectivity, Priority: supportcase.PriorityHigh,
+			Status: supportcase.StatusOpen, AssignedAgentID: agentID(0),
+		},
+		{
+			CustomerID: customers[0].ID, Subject: "Charged twice for August",
+			Description: "My August invoice shows two fiber charges.",
+			Category:    supportcase.CategoryBilling, Priority: supportcase.PriorityMedium,
+			Status: supportcase.StatusInProgress, AssignedAgentID: agentID(1),
+		},
+	}
+	if len(customers) > 1 {
+		cases = append(cases,
+			supportcase.Case{
+				CustomerID: customers[1].ID, Subject: "Mesh router keeps rebooting",
+				Description: "The MeshPro reboots every few hours.",
+				Category:    supportcase.CategoryHardware, Priority: supportcase.PriorityUrgent,
+				Status: supportcase.StatusOpen, AssignedAgentID: agentID(2),
+			},
+			supportcase.Case{
+				CustomerID: customers[1].ID, Subject: "How do I add an extra TV box?",
+				Description: "Want a second TV package decoder.",
+				Category:    supportcase.CategoryTV, Priority: supportcase.PriorityLow,
+				Status: supportcase.StatusResolved, AssignedAgentID: agentID(0),
+			},
+		)
+	}
+
+	// Omit the AssignedAgent association so GORM persists only the FK, never a phantom agent.
+	return db.Omit("AssignedAgent").Create(&cases).Error
 }
 
 func seedCustomers(db *gorm.DB) error {

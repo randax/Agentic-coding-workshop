@@ -42,6 +42,36 @@ export interface Subscription {
   product: Product;
 }
 
+export interface Agent {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export type CaseCategory =
+  | "billing"
+  | "connectivity"
+  | "hardware"
+  | "tv"
+  | "general";
+export type CasePriority = "low" | "medium" | "high" | "urgent";
+export type CaseStatus = "open" | "in_progress" | "resolved" | "closed";
+
+export interface Case {
+  id: number;
+  customerId: number;
+  subject: string;
+  description: string;
+  category: CaseCategory;
+  priority: CasePriority;
+  status: CaseStatus;
+  assignedAgentId?: number | null;
+  assignedAgent?: Agent | null;
+  /** ISO-8601 timestamps. */
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
@@ -76,6 +106,28 @@ export async function getProducts(): Promise<Product[]> {
     throw new Error(`Failed to load products (HTTP ${res.status})`);
   }
   return res.json() as Promise<Product[]>;
+}
+
+/** Fetches all support agents. Data is always fresh (uncached). */
+export async function getAgents(): Promise<Agent[]> {
+  const res = await fetch(`${API_BASE_URL}/agents`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Failed to load agents (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Agent[]>;
+}
+
+/** Fetches a customer's support cases. Data is always fresh (uncached). */
+export async function getCustomerCases(
+  id: string | number,
+): Promise<Case[]> {
+  const res = await fetch(`${API_BASE_URL}/customers/${id}/cases`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load cases (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Case[]>;
 }
 
 /** Fetches a customer's subscriptions. Data is always fresh (uncached). */

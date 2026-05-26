@@ -8,12 +8,14 @@ import (
 	"net/http"
 	"os"
 
+	"ispcrm/internal/agent"
 	"ispcrm/internal/api"
 	"ispcrm/internal/customer"
 	"ispcrm/internal/product"
 	"ispcrm/internal/seed"
 	"ispcrm/internal/store"
 	"ispcrm/internal/subscription"
+	"ispcrm/internal/supportcase"
 )
 
 func main() {
@@ -34,7 +36,9 @@ func main() {
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
 	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db), products)
-	router := api.NewRouter(customers, products, subscriptions)
+	agents := agent.NewService(store.NewAgentRepository(db))
+	cases := supportcase.NewService(store.NewCaseRepository(db))
+	router := api.NewRouter(customers, products, subscriptions, agents, cases)
 
 	log.Printf("ISP CRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {
