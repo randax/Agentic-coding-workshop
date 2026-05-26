@@ -1,7 +1,25 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import CustomerDetail from "./CustomerDetail";
-import type { Customer } from "@/lib/api";
+import type { Customer, Subscription } from "@/lib/api";
+
+const subscription: Subscription = {
+  id: 1,
+  customerId: 3,
+  productId: 1,
+  status: "active",
+  startDate: "2024-01-15T00:00:00Z",
+  monthlyPriceSnapshot: 499,
+  quantity: 1,
+  product: {
+    id: 1,
+    name: "Fiber 500",
+    category: "fiber",
+    monthlyPrice: 499,
+    available: true,
+    speedMbps: 500,
+  },
+};
 
 const sample: Customer = {
   id: 3,
@@ -64,11 +82,17 @@ describe("CustomerDetail", () => {
     );
   });
 
-  it("shows a placeholder on the subscriptions tab instead of profile fields", () => {
-    render(<CustomerDetail customer={sample} activeTab="subscriptions" />);
+  it("shows the subscriptions list on the subscriptions tab instead of profile fields", () => {
+    render(
+      <CustomerDetail
+        customer={sample}
+        activeTab="subscriptions"
+        subscriptions={[subscription]}
+      />,
+    );
 
     expect(screen.queryByText("grace@example.com")).not.toBeInTheDocument();
-    expect(screen.getByText("No subscriptions to display yet.")).toBeInTheDocument();
+    expect(screen.getByText("Fiber 500")).toBeInTheDocument();
   });
 
   it("shows a placeholder on the cases tab instead of profile fields", () => {
