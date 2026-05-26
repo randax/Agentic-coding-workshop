@@ -195,6 +195,43 @@ func (s *Service) AddComment(ctx context.Context, caseID, authorAgentID uint, bo
 	return cm, nil
 }
 
+// MetadataPatch carries optional case-metadata edits. Only the non-nil fields
+// are applied, so callers can change any subset (priority, category, assignee).
+type MetadataPatch struct {
+	Priority        *Priority
+	Category        *Category
+	AssignedAgentID *uint
+}
+
+// UpdateMetadata applies a metadata patch to a case: assign/reassign an agent
+// and adjust priority/category. Only provided fields change. An unknown case
+// yields ErrNotFound; an invalid priority/category yields the matching error.
+func (s *Service) UpdateMetadata(ctx context.Context, id uint, patch MetadataPatch) (Case, error) {
+	existing, err := s.repo.Get(ctx, id)
+	if err != nil {
+		return Case{}, err
+	}
+	if patch.Priority != nil {
+		if !patch.Priority.Valid() {
+			return Case{}, ErrInvalidPriority
+		}
+		existing.Priority = *patch.Priority
+	}
+	if patch.Category != nil {
+		if !patch.Category.Valid() {
+			return Case{}, ErrInvalidCategory
+		}
+		existing.Category = *patch.Category
+	}
+	if patch.AssignedAgentID != nil {
+		existing.AssignedAgentID = patch.AssignedAgentID
+	}
+	if err := s.repo.Update(ctx, &existing); err != nil {
+		return Case{}, err
+	}
+	return existing, nil
+}
+
 // ChangeStatus advances a case to a new status, enforcing the lifecycle state
 // machine. An unknown case yields ErrNotFound; a move that is not a legal
 // transition yields ErrIllegalTransition.

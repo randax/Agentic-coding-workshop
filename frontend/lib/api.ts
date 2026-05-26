@@ -198,6 +198,26 @@ export async function updateCaseStatus(
   return res.json() as Promise<Case>;
 }
 
+/** Updates a case's metadata: assign/reassign an agent, adjust priority/category. */
+export async function updateCaseMetadata(
+  caseId: string | number,
+  patch: {
+    priority?: CasePriority;
+    category?: CaseCategory;
+    assignedAgentId?: number;
+  },
+): Promise<Case> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to update case (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Case>;
+}
+
 /** Fetches a single case with its comment timeline. Returns null if not found. */
 export async function getCase(id: string | number): Promise<Case | null> {
   const res = await fetch(`${API_BASE_URL}/cases/${id}`, { cache: "no-store" });

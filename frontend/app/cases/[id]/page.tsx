@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import CaseDetail from "./CaseDetail";
 import CaseStatusControl from "./CaseStatusControl";
+import CaseMetadataControls from "./CaseMetadataControls";
 import AddCommentForm from "./AddCommentForm";
 
 export default async function CaseDetailPage({
@@ -55,6 +56,15 @@ export default async function CaseDetailPage({
       </div>
       <div className="mt-8">
         <CaseStatusControl caseId={caseItem.id} status={caseItem.status} />
+      </div>
+      <div className="mt-6">
+        <CaseMetadataControls
+          caseId={caseItem.id}
+          priority={caseItem.priority}
+          category={caseItem.category}
+          assignedAgentId={caseItem.assignedAgentId}
+          agents={agents}
+        />
       </div>
       <div className="mt-6">
         <AddCommentForm caseId={caseItem.id} agents={agents} />

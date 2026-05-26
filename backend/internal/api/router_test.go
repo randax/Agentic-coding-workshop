@@ -192,6 +192,57 @@ func TestPatchCaseIllegalTransitionReturns409(t *testing.T) {
 	}
 }
 
+func TestPatchCaseUpdatesMetadata(t *testing.T) {
+	db, router := newTestRouter(t)
+	ag := agent.Agent{Name: "Sam Carter", Email: "sam@isp.example"}
+	db.Create(&ag)
+	kase := supportcase.Case{CustomerID: 1, Subject: "No internet", Category: supportcase.CategoryGeneral, Priority: supportcase.PriorityLow, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+
+	body := `{"priority":"urgent","category":"billing","assignedAgentId":` + strconv.FormatUint(uint64(ag.ID), 10) + `}`
+	req := httptest.NewRequest(http.MethodPatch, "/cases/"+strconv.FormatUint(uint64(kase.ID), 10), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got supportcase.Case
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.Priority != supportcase.PriorityUrgent || got.Category != supportcase.CategoryBilling {
+		t.Errorf("case = %+v, want priority urgent category billing", got)
+	}
+	if got.AssignedAgentID == nil || *got.AssignedAgentID != ag.ID {
+		t.Errorf("case not assigned to agent %d: %+v", ag.ID, got.AssignedAgentID)
+	}
+	// Confirm it persisted.
+	var reloaded supportcase.Case
+	db.First(&reloaded, kase.ID)
+	if reloaded.Priority != supportcase.PriorityUrgent || reloaded.Category != supportcase.CategoryBilling ||
+		reloaded.AssignedAgentID == nil || *reloaded.AssignedAgentID != ag.ID {
+		t.Errorf("persisted case = %+v, want urgent/billing/agent %d", reloaded, ag.ID)
+	}
+}
+
+func TestPatchCaseInvalidPriorityReturns400(t *testing.T) {
+	db, router := newTestRouter(t)
+	kase := supportcase.Case{CustomerID: 1, Subject: "x", Category: supportcase.CategoryGeneral, Priority: supportcase.PriorityLow, Status: supportcase.StatusOpen}
+	db.Omit("AssignedAgent").Create(&kase)
+
+	body := `{"priority":"whenever"}`
+	req := httptest.NewRequest(http.MethodPatch, "/cases/"+strconv.FormatUint(uint64(kase.ID), 10), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestPatchCaseUnknownReturns404(t *testing.T) {
 	_, router := newTestRouter(t)
 
