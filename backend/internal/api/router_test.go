@@ -100,6 +100,51 @@ func TestGetAgentsReturnsAgents(t *testing.T) {
 	}
 }
 
+func TestPostCustomerCaseCreatesCase(t *testing.T) {
+	db, router := newTestRouter(t)
+	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&cust)
+	body := `{"subject":"No internet","description":"Down since 8am","category":"connectivity","priority":"high"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/customers/"+strconv.FormatUint(uint64(cust.ID), 10)+"/cases", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	var got supportcase.Case
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.ID == 0 || got.CustomerID != cust.ID {
+		t.Errorf("case = %+v, want assigned ID and customer %d", got, cust.ID)
+	}
+	if got.Subject != "No internet" || got.Category != supportcase.CategoryConnectivity || got.Priority != supportcase.PriorityHigh {
+		t.Errorf("case = %+v, want subject/category/priority from body", got)
+	}
+	if got.Status != supportcase.StatusOpen {
+		t.Errorf("new case status = %q, want %q", got.Status, supportcase.StatusOpen)
+	}
+}
+
+func TestPostCustomerCaseInvalidCategoryReturns400(t *testing.T) {
+	db, router := newTestRouter(t)
+	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}
+	db.Create(&cust)
+	body := `{"subject":"Help","category":"nonsense","priority":"high"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/customers/"+strconv.FormatUint(uint64(cust.ID), 10)+"/cases", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
 func TestGetCaseReturnsCaseWithCommentsInChronologicalOrder(t *testing.T) {
 	db, router := newTestRouter(t)
 	cust := customer.Customer{Name: "Ada Lovelace", AccountNumber: "ISP-1", Status: customer.StatusActive, CustomerSince: time.Now()}

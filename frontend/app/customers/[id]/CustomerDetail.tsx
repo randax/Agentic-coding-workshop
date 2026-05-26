@@ -4,6 +4,7 @@ import { formatDate } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import SubscriptionList from "./SubscriptionList";
 import CaseList from "./CaseList";
+import NewCaseForm from "./NewCaseForm";
 
 export type TabKey = "profile" | "subscriptions" | "cases";
 
@@ -82,7 +83,12 @@ export default function CustomerDetail({
             availableProducts={availableProducts}
           />
         )}
-        {activeTab === "cases" && <CaseList cases={cases} />}
+        {activeTab === "cases" && (
+          <div className="space-y-6">
+            <NewCaseForm customerId={customer.id} />
+            <CaseList cases={cases} />
+          </div>
+        )}
       </div>
     </div>
   );
