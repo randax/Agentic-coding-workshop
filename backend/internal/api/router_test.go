@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -66,6 +67,54 @@ func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
 		if !names[want] {
 			t.Errorf("expected customer %q in response", want)
 		}
+	}
+}
+
+func TestGetCustomerByIDReturnsCustomer(t *testing.T) {
+	db, router := newTestRouter(t)
+	c := customer.Customer{
+		Name: "Grace Hopper", Email: "grace@example.com",
+		AccountNumber: "ACME-003", Status: customer.StatusActive, CustomerSince: time.Now(),
+	}
+	db.Create(&c)
+
+	req := httptest.NewRequest(http.MethodGet, "/customers/"+strconv.FormatUint(uint64(c.ID), 10), nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got customer.Customer
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.ID != c.ID || got.Name != "Grace Hopper" || got.Email != "grace@example.com" {
+		t.Errorf("got %+v, want id=%d name=Grace Hopper", got, c.ID)
+	}
+}
+
+func TestGetCustomerByIDUnknownReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/customers/9999", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
+func TestGetCustomerByIDInvalidIDReturns400(t *testing.T) {
+	_, router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/customers/not-a-number", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
 	}
 }
 

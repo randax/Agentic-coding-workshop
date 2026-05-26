@@ -1,17 +1,7 @@
+import Link from "next/link";
 import { getCustomers, type Customer, API_BASE_URL } from "@/lib/api";
-
-const statusStyles: Record<Customer["status"], string> = {
-  active: "bg-green-100 text-green-800 ring-green-600/20",
-  suspended: "bg-amber-100 text-amber-800 ring-amber-600/20",
-};
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { formatDate } from "@/lib/format";
+import StatusBadge from "@/components/StatusBadge";
 
 export default async function CustomersPage() {
   let customers: Customer[] = [];
@@ -59,8 +49,13 @@ export default async function CustomersPage() {
             <tbody className="divide-y divide-gray-100">
               {customers.map((c) => (
                 <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {c.name}
+                  <td className="px-4 py-3 font-medium">
+                    <Link
+                      href={`/customers/${c.id}`}
+                      className="text-gray-900 hover:text-blue-700 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-600">
                     {c.accountNumber}
@@ -70,11 +65,7 @@ export default async function CustomersPage() {
                     {formatDate(c.customerSince)}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${statusStyles[c.status]}`}
-                    >
-                      {c.status}
-                    </span>
+                    <StatusBadge status={c.status} />
                   </td>
                 </tr>
               ))}

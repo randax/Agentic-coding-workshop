@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"ispcrm/internal/customer"
 
@@ -25,4 +26,17 @@ func (r *CustomerRepository) List(ctx context.Context) ([]customer.Customer, err
 		return nil, err
 	}
 	return customers, nil
+}
+
+// Get returns a single customer by ID, translating GORM's not-found error into
+// the domain-level customer.ErrNotFound.
+func (r *CustomerRepository) Get(ctx context.Context, id uint) (customer.Customer, error) {
+	var c customer.Customer
+	if err := r.db.WithContext(ctx).First(&c, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return customer.Customer{}, customer.ErrNotFound
+		}
+		return customer.Customer{}, err
+	}
+	return c, nil
 }

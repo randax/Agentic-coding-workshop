@@ -17,6 +17,18 @@ func (f *fakeRepo) List(ctx context.Context) ([]Customer, error) {
 	return f.customers, f.err
 }
 
+func (f *fakeRepo) Get(ctx context.Context, id uint) (Customer, error) {
+	if f.err != nil {
+		return Customer{}, f.err
+	}
+	for _, c := range f.customers {
+		if c.ID == id {
+			return c, nil
+		}
+	}
+	return Customer{}, ErrNotFound
+}
+
 func TestServiceListReturnsCustomersFromRepository(t *testing.T) {
 	want := []Customer{
 		{ID: 1, Name: "Ada Lovelace", AccountNumber: "ACME-001"},
@@ -35,6 +47,22 @@ func TestServiceListReturnsCustomersFromRepository(t *testing.T) {
 		if got[i].Name != want[i].Name {
 			t.Errorf("customer[%d].Name = %q, want %q", i, got[i].Name, want[i].Name)
 		}
+	}
+}
+
+func TestServiceGetReturnsCustomerByID(t *testing.T) {
+	repo := &fakeRepo{customers: []Customer{
+		{ID: 1, Name: "Ada Lovelace"},
+		{ID: 2, Name: "Alan Turing"},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.Get(context.Background(), 2)
+	if err != nil {
+		t.Fatalf("Get returned unexpected error: %v", err)
+	}
+	if got.Name != "Alan Turing" {
+		t.Errorf("Get(2).Name = %q, want %q", got.Name, "Alan Turing")
 	}
 }
 
