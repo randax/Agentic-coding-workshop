@@ -1,7 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import CustomerDetail from "./CustomerDetail";
 import type { Customer, Subscription } from "@/lib/api";
+
+// The Subscriptions tab embeds the interactive (client) SubscriptionList, which
+// reads the router; stub it so CustomerDetail can render in isolation.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const subscription: Subscription = {
   id: 1,

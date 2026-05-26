@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Customer, Subscription } from "@/lib/api";
+import type { Customer, Subscription, Product } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import StatusBadge from "@/components/StatusBadge";
 import SubscriptionList from "./SubscriptionList";
@@ -57,10 +57,12 @@ export default function CustomerDetail({
   customer,
   activeTab,
   subscriptions = [],
+  availableProducts = [],
 }: {
   customer: Customer;
   activeTab: TabKey;
   subscriptions?: Subscription[];
+  availableProducts?: Product[];
 }) {
   return (
     <div>
@@ -71,7 +73,11 @@ export default function CustomerDetail({
       <div className="mt-6">
         {activeTab === "profile" && <ProfilePanel customer={customer} />}
         {activeTab === "subscriptions" && (
-          <SubscriptionList subscriptions={subscriptions} />
+          <SubscriptionList
+            customerId={customer.id}
+            subscriptions={subscriptions}
+            availableProducts={availableProducts}
+          />
         )}
         {activeTab === "cases" && (
           <Placeholder>No support cases to display yet.</Placeholder>

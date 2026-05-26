@@ -36,6 +36,8 @@ func NewRouter(
 
 	sh := &subscriptionHandler{svc: subscriptions}
 	r.GET("/customers/:id/subscriptions", sh.listForCustomer)
+	r.POST("/customers/:id/subscriptions", sh.assign)
+	r.POST("/subscriptions/:id/cancel", sh.cancel)
 
 	return r
 }

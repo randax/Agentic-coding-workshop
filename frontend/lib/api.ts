@@ -76,6 +76,35 @@ export async function getCustomerSubscriptions(
   return res.json() as Promise<Subscription[]>;
 }
 
+/** Assigns a catalog product to a customer, creating a new subscription. */
+export async function createSubscription(
+  customerId: string | number,
+  input: { productId: number; quantity: number },
+): Promise<Subscription> {
+  const res = await fetch(`${API_BASE_URL}/customers/${customerId}/subscriptions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to create subscription (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Subscription>;
+}
+
+/** Cancels a subscription, setting its status to cancelled and an end date. */
+export async function cancelSubscription(
+  id: string | number,
+): Promise<Subscription> {
+  const res = await fetch(`${API_BASE_URL}/subscriptions/${id}/cancel`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to cancel subscription (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Subscription>;
+}
+
 /** Fetches a single customer by id. Returns null if no such customer exists. */
 export async function getCustomer(
   id: string | number,

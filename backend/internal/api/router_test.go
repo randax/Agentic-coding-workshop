@@ -32,7 +32,7 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	}
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
-	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db))
+	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db), products)
 	return db, NewRouter(customers, products, subscriptions)
 }
 
