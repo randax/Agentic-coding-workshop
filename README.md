@@ -4,7 +4,7 @@ A simple internal CRM for an ISP that sells fiber internet, mesh routers, and TV
 Customer-service agents can view customers, the products/subscriptions each customer has, and the
 support cases they've filed.
 
-See the [product requirements](../../issues/1) for the full scope.
+See the [product requirements](https://github.com/randax/Agentic-coding-workshop/issues/1) for the full scope.
 
 ## Stack
 
