@@ -8,12 +8,21 @@ import (
 	"time"
 
 	"ispcrm/internal/customer"
+	"ispcrm/internal/product"
 
 	"gorm.io/gorm"
 )
 
-// Demo seeds demo customers if none exist yet.
+// Demo seeds demo data. Each entity is seeded independently and only when its
+// table is empty, so Demo is safe to run on every startup.
 func Demo(db *gorm.DB) error {
+	if err := seedCustomers(db); err != nil {
+		return err
+	}
+	return seedProducts(db)
+}
+
+func seedCustomers(db *gorm.DB) error {
 	var count int64
 	if err := db.Model(&customer.Customer{}).Count(&count).Error; err != nil {
 		return err
@@ -52,4 +61,28 @@ func Demo(db *gorm.DB) error {
 		},
 	}
 	return db.Create(&customers).Error
+}
+
+func seedProducts(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&product.Product{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	speed500, speed1000 := 500, 1000
+	meshPro, meshMini := "MeshPro X6", "MeshMini M3"
+	tvBasic, tvPremium := "Basic", "Premium"
+
+	products := []product.Product{
+		{Name: "Fiber 500", Category: product.CategoryFiber, MonthlyPrice: 499, Available: true, SpeedMbps: &speed500},
+		{Name: "Fiber 1000", Category: product.CategoryFiber, MonthlyPrice: 699, Available: true, SpeedMbps: &speed1000},
+		{Name: "Mesh Router Pro", Category: product.CategoryRouter, MonthlyPrice: 99, Available: true, RouterModel: &meshPro},
+		{Name: "Mesh Router Mini", Category: product.CategoryRouter, MonthlyPrice: 59, Available: true, RouterModel: &meshMini},
+		{Name: "TV Basic", Category: product.CategoryTV, MonthlyPrice: 199, Available: true, TvPackageTier: &tvBasic},
+		{Name: "TV Premium", Category: product.CategoryTV, MonthlyPrice: 399, Available: true, TvPackageTier: &tvPremium},
+	}
+	return db.Create(&products).Error
 }

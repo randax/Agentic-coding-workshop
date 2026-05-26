@@ -5,6 +5,7 @@ package store
 
 import (
 	"ispcrm/internal/customer"
+	"ispcrm/internal/product"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -21,5 +22,5 @@ func Open(dsn string) (*gorm.DB, error) {
 
 // Migrate creates/updates the schema for all domain models.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(&customer.Customer{})
+	return db.AutoMigrate(&customer.Customer{}, &product.Product{})
 }

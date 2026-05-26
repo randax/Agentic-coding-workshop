@@ -26,12 +26,17 @@ Configuration (environment variables):
 
 ## API
 
-| Method | Path         | Description         |
-| ------ | ------------ | ------------------- |
-| GET    | `/customers` | List all customers  |
+| Method | Path                     | Description                       |
+| ------ | ------------------------ | --------------------------------- |
+| GET    | `/customers`             | List all customers                |
+| GET    | `/customers/{id}`        | Get one customer (404 if missing) |
+| GET    | `/products`              | List the product catalog          |
+| POST   | `/products`              | Create a product (201)            |
+| POST   | `/products/{id}/retire`  | Mark a product unavailable        |
 
 ```bash
 curl http://localhost:8080/customers
+curl http://localhost:8080/products
 ```
 
 ## Test
@@ -50,7 +55,8 @@ go test ./...
 
 ```
 cmd/server/        Entry point (composition root): open DB, migrate, seed, serve
-internal/customer/ Domain model + service (business logic) + Repository interface
+internal/customer/ Customer domain model + service + Repository interface
+internal/product/  Product/catalog domain model + service + Repository interface
 internal/store/    GORM-backed persistence (Open, Migrate, repositories)
 internal/api/      Gin router + handlers (HTTP <-> service translation)
 internal/seed/     Idempotent demo-data seeding
