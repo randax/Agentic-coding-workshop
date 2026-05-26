@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -125,6 +126,81 @@ func TestGetCustomersFiltersByStatusQueryParam(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].Name != "Alan Turing" {
 		t.Fatalf("status=suspended returned %+v, want only Alan Turing", got)
+	}
+}
+
+func TestPostCustomerCreatesCustomer(t *testing.T) {
+	_, router := newTestRouter(t)
+	body := `{"name":"Grace Hopper","email":"grace@navy.example","phone":"555-0100","serviceAddress":"1 Navy Yard","accountNumber":"ACME-003","status":"active"}`
+
+	req := httptest.NewRequest(http.MethodPost, "/customers", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	var got customer.Customer
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.ID == 0 || got.Name != "Grace Hopper" || got.AccountNumber != "ACME-003" {
+		t.Errorf("created customer = %+v, want assigned ID and Grace Hopper", got)
+	}
+}
+
+func TestPostCustomerInvalidReturns400(t *testing.T) {
+	_, router := newTestRouter(t)
+	body := `{"email":"x@example.com","accountNumber":"ACME-9","status":"active"}` // missing name
+
+	req := httptest.NewRequest(http.MethodPost, "/customers", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestPutCustomerUpdatesCustomer(t *testing.T) {
+	db, router := newTestRouter(t)
+	c := customer.Customer{
+		Name: "Grace Hopper", Email: "grace@navy.example", AccountNumber: "ACME-9",
+		Status: customer.StatusActive, CustomerSince: time.Now(),
+	}
+	db.Create(&c)
+	body := `{"name":"Grace B. Hopper","email":"ghopper@navy.example","phone":"555-0100","serviceAddress":"1 Navy Yard","accountNumber":"ACME-9","status":"suspended"}`
+
+	req := httptest.NewRequest(http.MethodPut, "/customers/"+strconv.FormatUint(uint64(c.ID), 10), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got customer.Customer
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, rec.Body.String())
+	}
+	if got.ID != c.ID || got.Name != "Grace B. Hopper" || got.Status != customer.StatusSuspended {
+		t.Errorf("updated customer = %+v, want id=%d Grace B. Hopper suspended", got, c.ID)
+	}
+}
+
+func TestPutCustomerUnknownReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+	body := `{"name":"Nobody","email":"n@example.com","accountNumber":"X","status":"active"}`
+
+	req := httptest.NewRequest(http.MethodPut, "/customers/9999", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
 	}
 }
 

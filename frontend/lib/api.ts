@@ -120,6 +120,45 @@ export async function cancelSubscription(
   return res.json() as Promise<Subscription>;
 }
 
+/** Editable customer profile fields, sent to the backend on create and edit. */
+export interface CustomerInput {
+  name: string;
+  email: string;
+  phone: string;
+  serviceAddress: string;
+  accountNumber: string;
+  status: CustomerStatus;
+}
+
+/** Creates a new customer. */
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  const res = await fetch(`${API_BASE_URL}/customers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to create customer (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Customer>;
+}
+
+/** Edits an existing customer's profile fields and status. */
+export async function updateCustomer(
+  id: string | number,
+  input: CustomerInput,
+): Promise<Customer> {
+  const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to update customer (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<Customer>;
+}
+
 /** Fetches a single customer by id. Returns null if no such customer exists. */
 export async function getCustomer(
   id: string | number,

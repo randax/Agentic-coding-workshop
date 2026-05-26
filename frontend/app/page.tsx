@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   getCustomers,
   type Customer,
@@ -30,15 +31,23 @@ export default async function CustomersPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-          Customers
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {error
-            ? "—"
-            : `${customers.length} customer${customers.length === 1 ? "" : "s"}`}
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+            Customers
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {error
+              ? "—"
+              : `${customers.length} customer${customers.length === 1 ? "" : "s"}`}
+          </p>
+        </div>
+        <Link
+          href="/customers/new"
+          className="shrink-0 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+        >
+          New customer
+        </Link>
       </header>
 
       <div className="mb-6">
