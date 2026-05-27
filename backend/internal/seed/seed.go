@@ -17,6 +17,7 @@ import (
 	"saltcrm/internal/lead"
 	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
+	"saltcrm/internal/report"
 	"saltcrm/internal/studio"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -59,7 +60,43 @@ func Demo(db *gorm.DB) error {
 	if err := seedCustomFields(db); err != nil {
 		return err
 	}
+	if err := seedReports(db); err != nil {
+		return err
+	}
 	return seedCaseComments(db)
+}
+
+// seedReports demonstrates the Reports module with a couple of saved reports the
+// user can re-run: a pipeline-by-stage total and a leads-by-status count.
+func seedReports(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&report.Saved{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	reports := []report.Saved{
+		{
+			Name: "Pipeline by stage",
+			Definition: report.Definition{
+				Module: "opportunities", GroupBy: "stage",
+				Aggregation: report.Sum, AggField: "amount",
+			},
+		},
+		{
+			Name: "Leads by status",
+			Definition: report.Definition{
+				Module: "leads", GroupBy: "status", Aggregation: report.Count,
+			},
+		},
+	}
+	for i := range reports {
+		if err := db.Create(&reports[i]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // seedCustomFields demonstrates Studio: a custom "Churn risk" field on accounts
