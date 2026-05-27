@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"saltcrm/internal/access"
+	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
 	"saltcrm/internal/conversion"
@@ -36,6 +37,7 @@ func NewRouter(
 	opportunities *opportunity.Service,
 	lineItems *opportunity.LineItemService,
 	conversions *conversion.Service,
+	activities *activity.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -76,6 +78,12 @@ func NewRouter(
 	leadsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), lh.update)
 	convH := &conversionHandler{svc: conversions}
 	leadsGroup.POST("/:id/convert", convH.convert)
+
+	actH := &activityHandler{svc: activities}
+	actGroup := r.Group("/activities", requireAuth(identitySvc))
+	actGroup.GET("", actH.list)
+	actGroup.POST("", actH.log)
+	actGroup.POST("/:id/complete", actH.complete)
 
 	oh := &opportunityHandler{svc: opportunities}
 	oppsGroup := r.Group("/opportunities", requireAuth(identitySvc))

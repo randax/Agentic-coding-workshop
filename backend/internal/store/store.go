@@ -4,6 +4,7 @@
 package store
 
 import (
+	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
@@ -43,5 +44,6 @@ func Migrate(db *gorm.DB) error {
 		&lead.Lead{},
 		&opportunity.Opportunity{},
 		&opportunity.LineItem{},
+		&activity.Activity{},
 	)
 }

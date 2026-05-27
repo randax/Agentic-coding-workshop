@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
@@ -51,7 +52,49 @@ func Demo(db *gorm.DB) error {
 	if err := seedCases(db); err != nil {
 		return err
 	}
+	if err := seedActivities(db); err != nil {
+		return err
+	}
 	return seedCaseComments(db)
+}
+
+func seedActivities(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&activity.Activity{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var customers []customer.Customer
+	if err := db.Order("id").Limit(6).Find(&customers).Error; err != nil {
+		return err
+	}
+	types := []activity.Type{activity.TypeCall, activity.TypeMeeting, activity.TypeTask}
+	now := time.Now()
+	var items []activity.Activity
+	for i, c := range customers {
+		typ := types[i%len(types)]
+		status := activity.StatusDone
+		if typ == activity.TypeTask {
+			status = activity.StatusOpen
+		}
+		items = append(items, activity.Activity{
+			Type:           typ,
+			Subject:        "Initial " + string(typ) + " with " + c.Name,
+			Status:         status,
+			ParentType:     "account",
+			ParentID:       c.ID,
+			OccurredAt:     now.AddDate(0, 0, -i),
+			TeamID:         c.TeamID,
+			AssignedUserID: c.AssignedUserID,
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return db.Create(&items).Error
 }
 
 func seedAgents(db *gorm.DB) error {
