@@ -43,5 +43,19 @@ func defaultRegistry() *metadata.Registry {
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "category", "monthlyPrice", "available"}},
 	})
+	r.Register(metadata.ModuleMeta{
+		Module:        "accounts",
+		Label:         "Accounts",
+		LabelSingular: "Account",
+		Fields: []metadata.Field{
+			{Name: "name", Type: metadata.FieldString, Label: "Name"},
+			{Name: "email", Type: metadata.FieldString, Label: "Email"},
+			{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
+			{Name: "serviceAddress", Type: metadata.FieldString, Label: "Service address"},
+			{Name: "accountNumber", Type: metadata.FieldString, Label: "Account number"},
+			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"active", "suspended"}},
+		},
+		ListView: metadata.ListView{Columns: []string{"name", "email", "accountNumber", "status"}},
+	})
 	return r
 }
