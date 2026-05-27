@@ -80,6 +80,49 @@ func (f *fakeRepo) Create(ctx context.Context, c *Case) error {
 	return nil
 }
 
+func (f *fakeRepo) ListByAssignee(ctx context.Context, agentID uint) ([]Case, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	var out []Case
+	for _, c := range f.cases {
+		if c.AssignedAgentID != nil && *c.AssignedAgentID == agentID {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+func TestListOpenForAgentReturnsOnlyAssignedActiveCases(t *testing.T) {
+	a1, a2 := uint(1), uint(2)
+	repo := &fakeRepo{cases: []Case{
+		{ID: 1, AssignedAgentID: &a1, Status: StatusOpen, Subject: "mine, open"},
+		{ID: 2, AssignedAgentID: &a1, Status: StatusInProgress, Subject: "mine, in progress"},
+		{ID: 3, AssignedAgentID: &a1, Status: StatusClosed, Subject: "mine, closed"},
+		{ID: 4, AssignedAgentID: &a1, Status: StatusResolved, Subject: "mine, resolved"},
+		{ID: 5, AssignedAgentID: &a2, Status: StatusOpen, Subject: "someone else's"},
+		{ID: 6, Status: StatusOpen, Subject: "unassigned"},
+	}}
+	svc := NewService(repo)
+
+	got, err := svc.ListOpenForAgent(context.Background(), a1)
+	if err != nil {
+		t.Fatalf("ListOpenForAgent error: %v", err)
+	}
+	// Only the agent's still-active cases (open + in_progress): ids 1 and 2.
+	if len(got) != 2 {
+		t.Fatalf("got %d cases, want 2; %+v", len(got), got)
+	}
+	for _, c := range got {
+		if c.AssignedAgentID == nil || *c.AssignedAgentID != a1 {
+			t.Errorf("case %d not assigned to agent %d", c.ID, a1)
+		}
+		if c.Status != StatusOpen && c.Status != StatusInProgress {
+			t.Errorf("case %d has terminal status %q", c.ID, c.Status)
+		}
+	}
+}
+
 func TestListForCustomerReturnsThatCustomersCases(t *testing.T) {
 	repo := &fakeRepo{cases: []Case{
 		{ID: 1, CustomerID: 7, Subject: "No internet", Status: StatusOpen, Priority: PriorityHigh, Category: CategoryConnectivity},

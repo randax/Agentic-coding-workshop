@@ -7,6 +7,7 @@ package activity
 import (
 	"context"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 )
@@ -92,6 +93,23 @@ func (s *Service) List(ctx context.Context) ([]Activity, error) {
 // ListForParent returns the activities logged against one record.
 func (s *Service) ListForParent(ctx context.Context, parentType string, parentID uint) ([]Activity, error) {
 	return s.repo.ListForParent(ctx, parentType, parentID)
+}
+
+// OpenTasksForUser returns a user's still-open tasks, soonest first — the "My
+// Tasks" dashlet. Calls/meetings and completed tasks are excluded.
+func (s *Service) OpenTasksForUser(ctx context.Context, userID uint) ([]Activity, error) {
+	all, err := s.repo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var tasks []Activity
+	for _, a := range all {
+		if a.Type == TypeTask && a.Status == StatusOpen && a.AssignedUserID != nil && *a.AssignedUserID == userID {
+			tasks = append(tasks, a)
+		}
+	}
+	sort.Slice(tasks, func(i, j int) bool { return tasks[i].OccurredAt.Before(tasks[j].OccurredAt) })
+	return tasks, nil
 }
 
 // Get returns a single activity by ID, or ErrNotFound.

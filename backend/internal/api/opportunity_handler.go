@@ -100,13 +100,9 @@ type pipelineStage struct {
 	Items       []opportunity.Opportunity `json:"items"`
 }
 
-// pipeline groups the visible opportunities by stage, in pipeline order.
-func (h *opportunityHandler) pipeline(c *gin.Context) {
-	opps, err := h.visibleFor(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load pipeline"})
-		return
-	}
+// buildPipeline groups opportunities by stage in pipeline order, with a per-stage
+// count and total. Shared by the pipeline endpoint and the dashboard dashlet.
+func buildPipeline(opps []opportunity.Opportunity) []pipelineStage {
 	byStage := map[opportunity.Stage]*pipelineStage{}
 	stages := make([]*pipelineStage, 0, len(opportunity.Stages))
 	for _, s := range opportunity.Stages {
@@ -125,5 +121,15 @@ func (h *opportunityHandler) pipeline(c *gin.Context) {
 	for i, ps := range stages {
 		out[i] = *ps
 	}
-	c.JSON(http.StatusOK, out)
+	return out
+}
+
+// pipeline groups the visible opportunities by stage, in pipeline order.
+func (h *opportunityHandler) pipeline(c *gin.Context) {
+	opps, err := h.visibleFor(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load pipeline"})
+		return
+	}
+	c.JSON(http.StatusOK, buildPipeline(opps))
 }

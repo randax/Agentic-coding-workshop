@@ -131,6 +131,8 @@ type CaseComment struct {
 // Repository is the persistence seam the service depends on.
 type Repository interface {
 	ListByCustomer(ctx context.Context, customerID uint) ([]Case, error)
+	// ListByAssignee returns all cases assigned to an agent.
+	ListByAssignee(ctx context.Context, agentID uint) ([]Case, error)
 	// Get returns a case with its comment timeline, or ErrNotFound.
 	Get(ctx context.Context, id uint) (Case, error)
 	// Create inserts a new case, assigning its ID.
@@ -154,6 +156,22 @@ func NewService(repo Repository) *Service {
 // ListForCustomer returns all cases filed by a customer.
 func (s *Service) ListForCustomer(ctx context.Context, customerID uint) ([]Case, error) {
 	return s.repo.ListByCustomer(ctx, customerID)
+}
+
+// ListOpenForAgent returns an agent's still-active cases (open or in-progress) —
+// the "My Open Cases" dashlet. Resolved and closed cases are excluded.
+func (s *Service) ListOpenForAgent(ctx context.Context, agentID uint) ([]Case, error) {
+	all, err := s.repo.ListByAssignee(ctx, agentID)
+	if err != nil {
+		return nil, err
+	}
+	var open []Case
+	for _, c := range all {
+		if c.Status == StatusOpen || c.Status == StatusInProgress {
+			open = append(open, c)
+		}
+	}
+	return open, nil
 }
 
 // Get returns a single case with its comment timeline, or ErrNotFound.

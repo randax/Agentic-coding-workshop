@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 type fakeRepo struct {
@@ -99,5 +100,33 @@ func TestCompleteMarksTaskDone(t *testing.T) {
 	}
 	if done.Status != StatusDone {
 		t.Errorf("status = %q, want done", done.Status)
+	}
+}
+
+func TestOpenTasksForUserReturnsOnlyMyOpenTasksSoonestFirst(t *testing.T) {
+	repo := newFakeRepo()
+	svc := NewService(repo)
+	ctx := context.Background()
+	me, other := uint(5), uint(6)
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	mk := func(typ Type, st Status, user uint, occ time.Time, subj string) {
+		u := user
+		repo.Create(ctx, &Activity{Type: typ, Status: st, AssignedUserID: &u, OccurredAt: occ, Subject: subj})
+	}
+	mk(TypeTask, StatusOpen, me, base.AddDate(0, 0, 2), "later task")
+	mk(TypeTask, StatusOpen, me, base.AddDate(0, 0, 1), "sooner task")
+	mk(TypeTask, StatusDone, me, base, "done task")     // excluded: completed
+	mk(TypeCall, StatusOpen, me, base, "a call")        // excluded: not a task
+	mk(TypeTask, StatusOpen, other, base, "their task") // excluded: not mine
+
+	got, err := svc.OpenTasksForUser(ctx, me)
+	if err != nil {
+		t.Fatalf("OpenTasksForUser error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d tasks, want 2; %+v", len(got), got)
+	}
+	if got[0].Subject != "sooner task" || got[1].Subject != "later task" {
+		t.Errorf("order = [%q, %q], want sooner then later (by OccurredAt)", got[0].Subject, got[1].Subject)
 	}
 }
