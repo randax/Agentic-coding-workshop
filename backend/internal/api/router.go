@@ -12,7 +12,6 @@ import (
 	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
-	"saltcrm/internal/conversion"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
@@ -38,7 +37,6 @@ func NewRouter(
 	leads *lead.Service,
 	opportunities *opportunity.Service,
 	lineItems *opportunity.LineItemService,
-	conversions *conversion.Service,
 	activities *activity.Service,
 	studioSvc *studio.Service,
 	reports *report.Service,
@@ -83,8 +81,6 @@ func NewRouter(
 	leadsGroup.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), lh.create)
 	leadsGroup.GET("/:id", lh.get)
 	leadsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), lh.update)
-	convH := &conversionHandler{svc: conversions}
-	leadsGroup.POST("/:id/convert", convH.convert)
 
 	actH := &activityHandler{svc: activities}
 	actGroup := r.Group("/activities", requireAuth(identitySvc))

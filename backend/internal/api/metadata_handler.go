@@ -173,16 +173,13 @@ func defaultRegistry() *metadata.Registry {
 			{Name: "company", Type: metadata.FieldString, Label: "Company"},
 			{Name: "email", Type: metadata.FieldString, Label: "Email"},
 			{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
-			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"new", "working", "qualified", "unqualified", "converted"}},
+			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"new", "working", "qualified", "unqualified"}},
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "company", "status", "email"}},
 		DetailView: metadata.DetailView{Panels: []metadata.Panel{
 			{Label: "Lead", Fields: []string{"name", "company", "email", "phone", "status"}},
 		}},
 		EditView: metadata.EditView{Fields: []string{"name", "company", "email", "phone", "status"}},
-		Actions: []metadata.Action{
-			{Label: "Convert", Method: "POST", Path: "/leads/{id}/convert"},
-		},
 	})
 	r.Register(metadata.ModuleMeta{
 		Module:        "opportunities",

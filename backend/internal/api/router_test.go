@@ -13,7 +13,6 @@ import (
 	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
-	"saltcrm/internal/conversion"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
@@ -52,11 +51,10 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	leads := lead.NewService(store.NewLeadRepository(db))
 	opportunities := opportunity.NewService(store.NewOpportunityRepository(db))
 	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
-	conversions := conversion.NewService(store.NewConversionRepository(db))
 	activities := activity.NewService(store.NewActivityRepository(db))
 	studioSvc := studio.NewService(store.NewFieldDefRepository(db), store.NewLayoutDefRepository(db))
 	reports := report.NewService(store.NewReportRepository(db))
-	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, conversions, activities, studioSvc, reports)
+	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, activities, studioSvc, reports)
 }
 
 func TestGetAgentsReturnsAgents(t *testing.T) {

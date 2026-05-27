@@ -213,13 +213,6 @@ export interface SubpanelMeta {
   columns: FieldMeta[];
 }
 
-export interface ActionMeta {
-  label: string;
-  method: string;
-  /** Endpoint with `{id}` replaced by the record's id. */
-  path: string;
-}
-
 export interface ModuleMeta {
   module: string;
   label: string;
@@ -229,7 +222,6 @@ export interface ModuleMeta {
   detailView?: { panels: PanelMeta[] };
   editView?: { fields: string[] };
   subpanels?: SubpanelMeta[];
-  actions?: ActionMeta[];
 }
 
 /** A module record is an open bag of fields; the metadata says how to render them. */
@@ -488,18 +480,6 @@ export async function saveLayouts(
   });
   if (!res.ok) {
     throw new Error(`Failed to save layout (HTTP ${res.status})`);
-  }
-}
-
-/** Runs a record action (e.g. convert a lead), substituting the id into its path. */
-export async function runRecordAction(
-  action: ActionMeta,
-  id: string | number,
-): Promise<void> {
-  const url = `${API_BASE_URL}${action.path.replace("{id}", String(id))}`;
-  const res = await fetch(url, { method: action.method, credentials: "include" });
-  if (!res.ok) {
-    throw new Error(`Action "${action.label}" failed (HTTP ${res.status})`);
   }
 }
 
