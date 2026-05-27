@@ -229,7 +229,7 @@ export async function unretireProduct(id: string | number): Promise<void> {
 
 // --- Generic module metadata (drives the metadata-rendered views under /m) ---
 
-export type FieldType = "string" | "enum" | "currency" | "bool";
+export type FieldType = "string" | "enum" | "currency" | "bool" | "date";
 
 export interface FieldMeta {
   name: string;
@@ -328,6 +328,23 @@ export async function updateModuleRecord(
     throw new Error(`Failed to update ${module}/${id} (HTTP ${res.status})`);
   }
   return res.json() as Promise<ModuleRecord>;
+}
+
+/** One stage column of the sales pipeline, with rolled-up count and total. */
+export interface PipelineStage {
+  stage: string;
+  count: number;
+  totalAmount: number;
+  items: ModuleRecord[];
+}
+
+/** Fetches the sales pipeline grouped by stage. */
+export async function getPipeline(cookie?: string): Promise<PipelineStage[]> {
+  const res = await fetch(`${API_BASE_URL}/opportunities/pipeline`, authGet(cookie));
+  if (!res.ok) {
+    throw new Error(`Failed to load pipeline (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<PipelineStage[]>;
 }
 
 /** Fetches a subpanel's related records, substituting the parent id into its path. */

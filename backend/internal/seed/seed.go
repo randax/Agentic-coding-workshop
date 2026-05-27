@@ -14,6 +14,7 @@ import (
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
+	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -39,6 +40,9 @@ func Demo(db *gorm.DB) error {
 		return err
 	}
 	if err := seedProducts(db); err != nil {
+		return err
+	}
+	if err := seedOpportunities(db); err != nil {
 		return err
 	}
 	if err := seedSubscriptions(db); err != nil {
@@ -333,6 +337,45 @@ func seedLeads(db *gorm.DB) error {
 		{Name: "Jonas Vik", Company: "Byfjord Eiendom", Email: "jonas@byfjord.example", Phone: "+47 904 77 888", Status: lead.StatusUnqualified, TeamID: teamID},
 	}
 	return db.Create(&leads).Error
+}
+
+func seedOpportunities(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&opportunity.Opportunity{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var customers []customer.Customer
+	if err := db.Order("id").Limit(6).Find(&customers).Error; err != nil {
+		return err
+	}
+	if len(customers) == 0 {
+		return nil
+	}
+
+	stages := []opportunity.Stage{
+		opportunity.StageProspecting, opportunity.StageQualification, opportunity.StageProposal,
+		opportunity.StageNegotiation, opportunity.StageClosedWon, opportunity.StageClosedLost,
+	}
+	base := time.Now().AddDate(0, 1, 0)
+	var opps []opportunity.Opportunity
+	for i, c := range customers {
+		stage := stages[i%len(stages)]
+		opps = append(opps, opportunity.Opportunity{
+			Name:              c.Name + " — fiber upgrade",
+			AccountID:         c.ID,
+			Amount:            float64((i + 1) * 12000),
+			Stage:             stage,
+			Probability:       stage.Probability(),
+			ExpectedCloseDate: base.AddDate(0, 0, i*15),
+			TeamID:            c.TeamID,
+			AssignedUserID:    c.AssignedUserID,
+		})
+	}
+	return db.Create(&opps).Error
 }
 
 func seedProducts(db *gorm.DB) error {

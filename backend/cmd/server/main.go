@@ -14,6 +14,7 @@ import (
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
+	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/seed"
 	"saltcrm/internal/store"
@@ -45,7 +46,8 @@ func main() {
 	identitySvc := identity.NewService(agentRepo, store.NewSessionRepository(db))
 	contacts := contact.NewService(store.NewContactRepository(db))
 	leads := lead.NewService(store.NewLeadRepository(db))
-	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads)
+	opportunities := opportunity.NewService(store.NewOpportunityRepository(db))
+	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities)
 
 	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {
