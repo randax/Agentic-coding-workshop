@@ -20,7 +20,7 @@ const CustomFieldsPanel = "Custom fields"
 // Resolve never mutates base (the registry shares it across requests): every
 // slice in the result is freshly allocated.
 func Resolve(base ModuleMeta, custom []Field, layouts map[string][]string) ModuleMeta {
-	out := base // copies scalar fields and passes Subpanels/Actions through
+	out := base // copies scalar fields and passes Subpanels through
 
 	// Merged field set: code fields then custom fields.
 	out.Fields = append(append(make([]Field, 0, len(base.Fields)+len(custom)), base.Fields...), custom...)

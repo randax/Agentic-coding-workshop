@@ -6,7 +6,6 @@ import type {
   SubpanelMeta,
 } from "@/lib/api";
 import { formatCell } from "./format";
-import RecordActions from "./RecordActions";
 
 /** A subpanel paired with the related records the page fetched for it. */
 export interface SubpanelData {
@@ -42,18 +41,12 @@ export default function RecordView({
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           {String(record.name ?? meta.labelSingular)}
         </h1>
-        <div className="flex items-center gap-3">
-          <RecordActions
-            actions={meta.actions ?? []}
-            recordId={Number(record.id)}
-          />
-          <Link
-            href={`/m/${meta.module}/${record.id}/edit`}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
-          >
-            Edit
-          </Link>
-        </div>
+        <Link
+          href={`/m/${meta.module}/${record.id}/edit`}
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+        >
+          Edit
+        </Link>
       </div>
 
       {panels.map((panel) => (

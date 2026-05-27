@@ -1,6 +1,6 @@
 // Package lead holds the lead domain model and service. A lead is an
-// unqualified prospect that can later be converted into an account + contact +
-// opportunity. The service depends on the Repository interface, not a database.
+// unqualified prospect in the qualification funnel. The service depends on the
+// Repository interface, not a database.
 package lead
 
 import (
@@ -26,13 +26,12 @@ const (
 	StatusWorking     Status = "working"
 	StatusQualified   Status = "qualified"
 	StatusUnqualified Status = "unqualified"
-	StatusConverted   Status = "converted"
 )
 
 // Valid reports whether s is a known lead status.
 func (s Status) Valid() bool {
 	switch s {
-	case StatusNew, StatusWorking, StatusQualified, StatusUnqualified, StatusConverted:
+	case StatusNew, StatusWorking, StatusQualified, StatusUnqualified:
 		return true
 	default:
 		return false
@@ -50,11 +49,6 @@ type Lead struct {
 
 	AssignedUserID *uint `json:"assignedUserId,omitempty"`
 	TeamID         *uint `json:"teamId,omitempty"`
-
-	// Set when the lead is converted, linking it to what it became.
-	ConvertedAccountID     *uint `json:"convertedAccountId,omitempty"`
-	ConvertedContactID     *uint `json:"convertedContactId,omitempty"`
-	ConvertedOpportunityID *uint `json:"convertedOpportunityId,omitempty"`
 }
 
 // Repository is the persistence seam the service depends on.
