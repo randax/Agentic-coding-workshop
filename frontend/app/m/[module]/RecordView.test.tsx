@@ -89,4 +89,20 @@ describe("generic RecordView", () => {
       "/m/accounts/7/edit",
     );
   });
+
+  it("renders headerActions beside Edit when provided", () => {
+    render(
+      <RecordView
+        meta={meta}
+        record={record}
+        subpanels={[]}
+        headerActions={<button>Convert</button>}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Convert" }),
+    ).toBeInTheDocument();
+    // Edit still renders alongside it.
+    expect(screen.getByRole("link", { name: /edit/i })).toBeInTheDocument();
+  });
 });

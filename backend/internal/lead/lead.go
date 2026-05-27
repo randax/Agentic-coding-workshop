@@ -26,12 +26,15 @@ const (
 	StatusWorking     Status = "working"
 	StatusQualified   Status = "qualified"
 	StatusUnqualified Status = "unqualified"
+	// StatusConverted is the terminal status set when a qualified lead is
+	// converted into an account; it drops the lead out of the active funnel.
+	StatusConverted Status = "converted"
 )
 
 // Valid reports whether s is a known lead status.
 func (s Status) Valid() bool {
 	switch s {
-	case StatusNew, StatusWorking, StatusQualified, StatusUnqualified:
+	case StatusNew, StatusWorking, StatusQualified, StatusUnqualified, StatusConverted:
 		return true
 	default:
 		return false
@@ -49,6 +52,11 @@ type Lead struct {
 
 	AssignedUserID *uint `json:"assignedUserId,omitempty"`
 	TeamID         *uint `json:"teamId,omitempty"`
+
+	// ConvertedAccountID links a converted lead to the account it became. Nil
+	// until conversion; non-nil blocks a second conversion and drives the
+	// "Converted → account" banner deep-link.
+	ConvertedAccountID *uint `json:"convertedAccountId,omitempty"`
 }
 
 // Repository is the persistence seam the service depends on.

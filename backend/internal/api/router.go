@@ -12,6 +12,7 @@ import (
 	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
+	"saltcrm/internal/conversion"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
@@ -40,6 +41,7 @@ func NewRouter(
 	activities *activity.Service,
 	studioSvc *studio.Service,
 	reports *report.Service,
+	conversions *conversion.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -81,6 +83,11 @@ func NewRouter(
 	leadsGroup.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), lh.create)
 	leadsGroup.GET("/:id", lh.get)
 	leadsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), lh.update)
+	// Convert is the rep's one sanctioned path to create an account/contact, so it
+	// is deliberately open to agents too (bounded by lead visibility), unlike the
+	// manager/admin-gated create routes elsewhere.
+	convH := &conversionHandler{svc: conversions}
+	leadsGroup.POST("/:id/convert", requireRole(agent.RoleAgent, agent.RoleManager, agent.RoleAdmin), convH.convert)
 
 	actH := &activityHandler{svc: activities}
 	actGroup := r.Group("/activities", requireAuth(identitySvc))

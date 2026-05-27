@@ -173,7 +173,7 @@ func defaultRegistry() *metadata.Registry {
 			{Name: "company", Type: metadata.FieldString, Label: "Company"},
 			{Name: "email", Type: metadata.FieldString, Label: "Email"},
 			{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
-			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"new", "working", "qualified", "unqualified"}},
+			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"new", "working", "qualified", "unqualified", "converted"}},
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "company", "status", "email"}},
 		DetailView: metadata.DetailView{Panels: []metadata.Panel{

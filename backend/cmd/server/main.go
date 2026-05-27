@@ -12,6 +12,7 @@ import (
 	"saltcrm/internal/agent"
 	"saltcrm/internal/api"
 	"saltcrm/internal/contact"
+	"saltcrm/internal/conversion"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
@@ -54,7 +55,8 @@ func main() {
 	activities := activity.NewService(store.NewActivityRepository(db))
 	studioSvc := studio.NewService(store.NewFieldDefRepository(db), store.NewLayoutDefRepository(db))
 	reports := report.NewService(store.NewReportRepository(db))
-	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, activities, studioSvc, reports)
+	conversions := conversion.NewService(store.NewConversionRepository(db))
+	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, activities, studioSvc, reports, conversions)
 
 	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {
