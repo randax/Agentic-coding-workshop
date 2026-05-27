@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"saltcrm/internal/agent"
+	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
@@ -28,6 +29,9 @@ func Demo(db *gorm.DB) error {
 		return err
 	}
 	if err := seedCustomers(db); err != nil {
+		return err
+	}
+	if err := seedContacts(db); err != nil {
 		return err
 	}
 	if err := seedProducts(db); err != nil {
@@ -266,6 +270,40 @@ func seedCustomers(db *gorm.DB) error {
 		}
 	}
 	return db.Create(&customers).Error
+}
+
+func seedContacts(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&contact.Contact{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var customers []customer.Customer
+	if err := db.Order("id").Find(&customers).Error; err != nil {
+		return err
+	}
+	titles := []string{"Billing contact", "Technical contact"}
+	var contacts []contact.Contact
+	for _, c := range customers {
+		// One primary contact per account, inheriting its team/owner so it's
+		// visible to the same users.
+		contacts = append(contacts, contact.Contact{
+			Name:           c.Name,
+			Email:          c.Email,
+			Phone:          c.Phone,
+			Title:          titles[int(c.ID)%len(titles)],
+			AccountID:      c.ID,
+			TeamID:         c.TeamID,
+			AssignedUserID: c.AssignedUserID,
+		})
+	}
+	if len(contacts) == 0 {
+		return nil
+	}
+	return db.Create(&contacts).Error
 }
 
 func seedProducts(db *gorm.DB) error {

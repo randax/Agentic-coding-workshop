@@ -10,6 +10,7 @@ import (
 
 	"saltcrm/internal/access"
 	"saltcrm/internal/agent"
+	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
@@ -27,6 +28,7 @@ func NewRouter(
 	agents *agent.Service,
 	cases *supportcase.Service,
 	identitySvc *identity.Service,
+	contacts *contact.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -52,6 +54,13 @@ func NewRouter(
 	accounts.GET("", ch.list)
 	accounts.GET("/:id", ch.get)
 	accounts.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), ch.update)
+
+	cth := &contactHandler{svc: contacts}
+	accounts.GET("/:id/contacts", cth.listForAccount) // Account → Contacts subpanel
+	contactsGroup := r.Group("/contacts", requireAuth(identitySvc))
+	contactsGroup.GET("", cth.list)
+	contactsGroup.GET("/:id", cth.get)
+	contactsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), cth.update)
 
 	mh := &metadataHandler{reg: defaultRegistry()}
 	r.GET("/metadata/:module", mh.get)

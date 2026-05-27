@@ -5,6 +5,7 @@ package store
 
 import (
 	"saltcrm/internal/agent"
+	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
@@ -36,5 +37,6 @@ func Migrate(db *gorm.DB) error {
 		&supportcase.CaseComment{},
 		&team.Team{},
 		&identity.Session{},
+		&contact.Contact{},
 	)
 }

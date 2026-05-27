@@ -67,6 +67,16 @@ func defaultRegistry() *metadata.Registry {
 		EditView: metadata.EditView{Fields: []string{"name", "email", "phone", "serviceAddress", "accountNumber", "status"}},
 		Subpanels: []metadata.Subpanel{
 			{
+				Label: "Contacts",
+				Path:  "/accounts/{id}/contacts",
+				Columns: []metadata.Field{
+					{Name: "name", Type: metadata.FieldString, Label: "Name"},
+					{Name: "title", Type: metadata.FieldString, Label: "Title"},
+					{Name: "email", Type: metadata.FieldString, Label: "Email"},
+					{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
+				},
+			},
+			{
 				Label: "Cases",
 				Path:  "/customers/{id}/cases",
 				Columns: []metadata.Field{
@@ -77,6 +87,22 @@ func defaultRegistry() *metadata.Registry {
 				},
 			},
 		},
+	})
+	r.Register(metadata.ModuleMeta{
+		Module:        "contacts",
+		Label:         "Contacts",
+		LabelSingular: "Contact",
+		Fields: []metadata.Field{
+			{Name: "name", Type: metadata.FieldString, Label: "Name"},
+			{Name: "title", Type: metadata.FieldString, Label: "Title"},
+			{Name: "email", Type: metadata.FieldString, Label: "Email"},
+			{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
+		},
+		ListView: metadata.ListView{Columns: []string{"name", "title", "email", "phone"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Contact", Fields: []string{"name", "title", "email", "phone"}},
+		}},
+		EditView: metadata.EditView{Fields: []string{"name", "title", "email", "phone"}},
 	})
 	return r
 }
