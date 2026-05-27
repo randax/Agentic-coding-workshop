@@ -20,6 +20,16 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 	return &SubscriptionRepository{db: db}
 }
 
+// List returns all subscriptions, with each subscription's catalog product
+// preloaded for display.
+func (r *SubscriptionRepository) List(ctx context.Context) ([]subscription.Subscription, error) {
+	var subs []subscription.Subscription
+	if err := r.db.WithContext(ctx).Preload("Product").Order("start_date desc").Find(&subs).Error; err != nil {
+		return nil, err
+	}
+	return subs, nil
+}
+
 // ListByCustomer returns a customer's subscriptions, with each subscription's
 // catalog product preloaded for display.
 func (r *SubscriptionRepository) ListByCustomer(ctx context.Context, customerID uint) ([]subscription.Subscription, error) {

@@ -19,6 +19,17 @@ func newFakeRepo() *fakeRepo {
 	return &fakeRepo{items: map[uint]Subscription{}}
 }
 
+func (f *fakeRepo) List(ctx context.Context) ([]Subscription, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	var out []Subscription
+	for _, s := range f.items {
+		out = append(out, s)
+	}
+	return out, nil
+}
+
 func (f *fakeRepo) ListByCustomer(ctx context.Context, customerID uint) ([]Subscription, error) {
 	if f.err != nil {
 		return nil, f.err

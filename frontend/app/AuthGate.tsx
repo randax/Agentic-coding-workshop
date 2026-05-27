@@ -88,6 +88,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           >
             Products
           </Link>
+          <Link
+            href="/m/subscriptions"
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Subscriptions
+          </Link>
           <div className="ml-auto flex items-center gap-3 text-sm text-gray-500">
             <span>
               {user.name}

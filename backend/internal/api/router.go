@@ -101,6 +101,7 @@ func NewRouter(
 
 	sh := &subscriptionHandler{svc: subscriptions}
 	r.GET("/customers/:id/subscriptions", sh.listForCustomer)
+	r.Group("/subscriptions", requireAuth(identitySvc)).GET("", sh.list)
 	r.POST("/customers/:id/subscriptions", sh.assign)
 	r.POST("/subscriptions/:id/cancel", sh.cancel)
 
