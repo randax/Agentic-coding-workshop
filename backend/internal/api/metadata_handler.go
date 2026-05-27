@@ -42,6 +42,10 @@ func defaultRegistry() *metadata.Registry {
 			{Name: "available", Type: metadata.FieldBool, Label: "Status"},
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "category", "monthlyPrice", "available"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Product", Fields: []string{"name", "category", "monthlyPrice", "available"}},
+		}},
+		EditView: metadata.EditView{Fields: []string{"name", "category", "monthlyPrice"}},
 	})
 	r.Register(metadata.ModuleMeta{
 		Module:        "accounts",
@@ -56,6 +60,23 @@ func defaultRegistry() *metadata.Registry {
 			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"active", "suspended"}},
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "email", "accountNumber", "status"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Profile", Fields: []string{"name", "email", "phone", "serviceAddress"}},
+			{Label: "Account", Fields: []string{"accountNumber", "status"}},
+		}},
+		EditView: metadata.EditView{Fields: []string{"name", "email", "phone", "serviceAddress", "accountNumber", "status"}},
+		Subpanels: []metadata.Subpanel{
+			{
+				Label: "Cases",
+				Path:  "/customers/{id}/cases",
+				Columns: []metadata.Field{
+					{Name: "subject", Type: metadata.FieldString, Label: "Subject"},
+					{Name: "category", Type: metadata.FieldString, Label: "Category"},
+					{Name: "priority", Type: metadata.FieldString, Label: "Priority"},
+					{Name: "status", Type: metadata.FieldString, Label: "Status"},
+				},
+			},
+		},
 	})
 	return r
 }

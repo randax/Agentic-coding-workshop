@@ -81,6 +81,39 @@ func TestPostProductInvalidCategoryReturns400(t *testing.T) {
 	}
 }
 
+func TestGetProductByIDReturnsProduct(t *testing.T) {
+	db, router := newTestRouter(t)
+	p := product.Product{Name: "Fiber 500", Category: product.CategoryFiber, MonthlyPrice: 499, Available: true}
+	db.Create(&p)
+
+	req := httptest.NewRequest(http.MethodGet, "/products/"+strconv.FormatUint(uint64(p.ID), 10), nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var got product.Product
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	if got.ID != p.ID || got.Name != "Fiber 500" {
+		t.Errorf("product = %+v, want id=%d name=Fiber 500", got, p.ID)
+	}
+}
+
+func TestGetProductByIDUnknownReturns404(t *testing.T) {
+	_, router := newTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/products/9999", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
 func TestPutProductEditsProduct(t *testing.T) {
 	db, router := newTestRouter(t)
 	speed := 500

@@ -26,6 +26,24 @@ func (h *productHandler) list(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 }
 
+func (h *productHandler) get(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product id"})
+		return
+	}
+	p, err := h.svc.Get(c.Request.Context(), uint(id))
+	if err != nil {
+		if errors.Is(err, product.ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "product not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get product"})
+		return
+	}
+	c.JSON(http.StatusOK, p)
+}
+
 func (h *productHandler) create(c *gin.Context) {
 	var p product.Product
 	if err := c.ShouldBindJSON(&p); err != nil {

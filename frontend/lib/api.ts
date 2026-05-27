@@ -184,12 +184,27 @@ export interface FieldMeta {
   options?: string[];
 }
 
+export interface PanelMeta {
+  label: string;
+  fields: string[];
+}
+
+export interface SubpanelMeta {
+  label: string;
+  /** Records endpoint with `{id}` replaced by the parent record's id. */
+  path: string;
+  columns: FieldMeta[];
+}
+
 export interface ModuleMeta {
   module: string;
   label: string;
   labelSingular: string;
   fields: FieldMeta[];
   listView: { columns: string[] };
+  detailView?: { panels: PanelMeta[] };
+  editView?: { fields: string[] };
+  subpanels?: SubpanelMeta[];
 }
 
 /** A module record is an open bag of fields; the metadata says how to render them. */
@@ -211,6 +226,51 @@ export async function getModuleRecords(module: string): Promise<ModuleRecord[]> 
   const res = await fetch(`${API_BASE_URL}/${module}`, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Failed to load ${module} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleRecord[]>;
+}
+
+/** Fetches a single module record (`/{module}/{id}`). Returns null if not found. */
+export async function getModuleRecord(
+  module: string,
+  id: string | number,
+): Promise<ModuleRecord | null> {
+  const res = await fetch(`${API_BASE_URL}/${module}/${id}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`Failed to load ${module}/${id} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleRecord>;
+}
+
+/** Updates a single module record (`PUT /{module}/{id}`) with the given field values. */
+export async function updateModuleRecord(
+  module: string,
+  id: string | number,
+  values: ModuleRecord,
+): Promise<ModuleRecord> {
+  const res = await fetch(`${API_BASE_URL}/${module}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(values),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to update ${module}/${id} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleRecord>;
+}
+
+/** Fetches a subpanel's related records, substituting the parent id into its path. */
+export async function getSubpanelRecords(
+  path: string,
+  parentId: string | number,
+): Promise<ModuleRecord[]> {
+  const url = `${API_BASE_URL}${path.replace("{id}", String(parentId))}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Failed to load related records (HTTP ${res.status})`);
   }
   return res.json() as Promise<ModuleRecord[]>;
 }
