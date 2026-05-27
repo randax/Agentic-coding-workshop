@@ -315,6 +315,37 @@ export async function updateModuleRecord(
   return res.json() as Promise<ModuleRecord>;
 }
 
+/** The ids created when a qualified lead is converted into an account. */
+export interface ConvertLeadResult {
+  accountId: number;
+  contactId: number;
+}
+
+/** Converts a qualified lead into a new account with a linked contact
+ * (`POST /leads/{id}/convert`). The backend creates the records atomically and
+ * returns their ids; the body is empty for now (always a new account). */
+export async function convertLead(
+  leadId: number | string,
+): Promise<ConvertLeadResult> {
+  const res = await fetch(`${API_BASE_URL}/leads/${leadId}/convert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: "{}",
+  });
+  if (!res.ok) {
+    // Surface the backend's domain message (e.g. "lead already converted",
+    // "lead is not qualified") so a 409/422 conflict isn't misreported as an
+    // outage. Falls back to the status when no message is present.
+    const message = await res
+      .json()
+      .then((b) => (b as { error?: string }).error)
+      .catch(() => undefined);
+    throw new Error(message || `Failed to convert lead ${leadId} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ConvertLeadResult>;
+}
+
 /** One stage column of the sales pipeline, with rolled-up count and total. */
 export interface PipelineStage {
   stage: string;

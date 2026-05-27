@@ -23,6 +23,7 @@ export default function RecordView({
   record,
   subpanels,
   subpanelOverrides,
+  headerActions,
 }: {
   meta: ModuleMeta;
   record: ModuleRecord;
@@ -31,6 +32,9 @@ export default function RecordView({
    * the generic read-only table for that subpanel (e.g. an account's Cases and
    * Subscriptions panels, which carry create/cancel actions). */
   subpanelOverrides?: Record<string, React.ReactNode>;
+  /** Module-specific actions rendered beside Edit in the header (e.g. a lead's
+   * Convert button / "Converted →" banner). */
+  headerActions?: React.ReactNode;
 }) {
   const fieldsByName = new Map(meta.fields.map((f) => [f.name, f]));
   const panels = meta.detailView?.panels ?? [];
@@ -41,12 +45,15 @@ export default function RecordView({
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           {String(record.name ?? meta.labelSingular)}
         </h1>
-        <Link
-          href={`/m/${meta.module}/${record.id}/edit`}
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
-        >
-          Edit
-        </Link>
+        <div className="flex items-center gap-3">
+          {headerActions}
+          <Link
+            href={`/m/${meta.module}/${record.id}/edit`}
+            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+          >
+            Edit
+          </Link>
+        </div>
       </div>
 
       {panels.map((panel) => (

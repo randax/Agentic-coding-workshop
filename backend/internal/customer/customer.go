@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -24,6 +25,14 @@ var (
 	ErrAccountNumberRequired = errors.New("customer account number is required")
 	ErrInvalidStatus         = errors.New("invalid customer status")
 )
+
+// FormatAccountNumber renders a sequence number as a server-minted account
+// number in the seed format ISP-#### (zero-padded to four digits). The next
+// sequence is computed where uniqueness must hold (inside the persisting
+// transaction); this function owns only the format rule.
+func FormatAccountNumber(seq int) string {
+	return fmt.Sprintf("ISP-%04d", seq)
+}
 
 // Status is a customer's account standing.
 type Status string

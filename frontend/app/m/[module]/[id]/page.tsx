@@ -10,6 +10,7 @@ import {
   API_BASE_URL,
 } from "@/lib/api";
 import RecordView, { type SubpanelData } from "../RecordView";
+import ConvertLeadButton from "../ConvertLeadButton";
 import { accountSubpanelOverrides } from "@/components/account/accountSubpanels";
 
 export default async function ModuleRecordPage({
@@ -26,6 +27,9 @@ export default async function ModuleRecordPage({
   // Accounts get bespoke Cases/Subscriptions subpanels (with create/cancel
   // actions); every other module's subpanels are the generic read-only tables.
   let subpanelOverrides: Record<string, React.ReactNode> | undefined;
+  // Leads get a Convert action in the header (or a "Converted →" banner once
+  // converted); ConvertLeadButton decides which to show from the lead's state.
+  let headerActions: React.ReactNode;
 
   try {
     [meta, record] = await Promise.all([
@@ -35,6 +39,15 @@ export default async function ModuleRecordPage({
     if (record === null) notFound();
     if (module === "accounts") {
       subpanelOverrides = await accountSubpanelOverrides(id);
+    }
+    if (module === "leads") {
+      headerActions = (
+        <ConvertLeadButton
+          leadId={Number(record.id)}
+          status={String(record.status ?? "")}
+          convertedAccountId={record.convertedAccountId as number | undefined}
+        />
+      );
     }
     subpanels = await Promise.all(
       (meta.subpanels ?? []).map(async (sp) => ({
@@ -73,6 +86,7 @@ export default async function ModuleRecordPage({
           record={record!}
           subpanels={subpanels}
           subpanelOverrides={subpanelOverrides}
+          headerActions={headerActions}
         />
       </div>
     </main>

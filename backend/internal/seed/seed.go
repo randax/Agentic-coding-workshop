@@ -379,7 +379,7 @@ func seedCustomers(db *gorm.DB) error {
 			Email:          firstName + "@example.com",
 			Phone:          fmt.Sprintf("+47 900 %02d %03d", i+1, (i*37)%1000),
 			ServiceAddress: s.address,
-			AccountNumber:  fmt.Sprintf("ISP-%04d", 1001+i),
+			AccountNumber:  customer.FormatAccountNumber(1001 + i),
 			CustomerSince:  base.AddDate(0, i*2, i),
 			Status:         s.status,
 		}
