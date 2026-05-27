@@ -35,6 +35,9 @@ func NewRouter(
 	r.GET("/customers/:id", ch.get)
 	r.PUT("/customers/:id", ch.update)
 
+	mh := &metadataHandler{reg: defaultRegistry()}
+	r.GET("/metadata/:module", mh.get)
+
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)
 	r.POST("/products", ph.create)
