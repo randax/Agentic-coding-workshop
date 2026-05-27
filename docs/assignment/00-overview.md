@@ -50,6 +50,11 @@ client-brief.md
       │
       ▼
    verify against the acceptance checklist
+      │
+      ▼
+┌──────────────────────────────┐  deepen a shallow module for testability
+│ /improve-codebase-architecture│  → a refactor RFC issue       (step 6, capstone)
+└──────────────────────────────┘
 ```
 
 ## What you'll learn
@@ -61,6 +66,8 @@ client-brief.md
   loop (**HITL**, human-in-the-loop).
 - How to **run an unattended-ish agent** (`ralph/once.sh`) that picks a task,
   builds it test-first, runs the feedback loops, and commits.
+- How to **find and plan an architecture improvement** — deepening a shallow
+  module for testability — and turn it back into a pipeline issue.
 
 ## Steps
 
@@ -71,6 +78,7 @@ client-brief.md
 | 3 | [Write a PRD with the write-a-prd skill](03-write-a-prd-with-the-write-a-prd-skill.md) | `issues/prd.md` | 20–30 min |
 | 4 | [Turn a PRD to a kanban board with prd-to-issues](04-turn-a-prd-to-a-kanban-board-with-prd-to-issues.md) | `issues/NNN-*.md` issue files | 30–40 min |
 | 5 | [Running your AFK agent](05-running-your-afk-agent.md) | The rebuilt, working feature | 60–120 min |
+| 6 | [Improve the codebase architecture](06-improve-codebase-architecture.md) *(capstone)* | A refactor RFC issue | 30–45 min |
 
 ## Prerequisites (summary — details in step 1)
 
@@ -89,5 +97,9 @@ satisfies the acceptance checklist in [step 5](05-running-your-afk-agent.md):
 a qualified lead can be converted into an Account + Contact + Opportunity, the
 lead becomes `converted` and can't be converted twice, and the backend and
 frontend test suites are green.
+
+Then, as a **capstone**, [step 6](06-improve-codebase-architecture.md) has you
+improve the architecture of what you built — finding a shallow module and
+planning a deeper one as a refactor RFC.
 
 → Start with [**Setting up the repo**](01-setting-up-the-repo.md).

@@ -170,4 +170,4 @@ spec-to-ship pipeline. That's the job.
 
 ---
 
-← [Turn a PRD to a kanban board with prd-to-issues](04-turn-a-prd-to-a-kanban-board-with-prd-to-issues.md) · [Back to overview](00-overview.md)
+← [Turn a PRD to a kanban board with prd-to-issues](04-turn-a-prd-to-a-kanban-board-with-prd-to-issues.md) · Next → [Improve the codebase architecture](06-improve-codebase-architecture.md)
