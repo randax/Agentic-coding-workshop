@@ -12,6 +12,7 @@ import (
 
 	"saltcrm/internal/agent"
 	"saltcrm/internal/customer"
+	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/store"
 	"saltcrm/internal/subscription"
@@ -36,9 +37,11 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	customers := customer.NewService(store.NewCustomerRepository(db))
 	products := product.NewService(store.NewProductRepository(db))
 	subscriptions := subscription.NewService(store.NewSubscriptionRepository(db), products)
-	agents := agent.NewService(store.NewAgentRepository(db))
+	agentRepo := store.NewAgentRepository(db)
+	agents := agent.NewService(agentRepo)
 	cases := supportcase.NewService(store.NewCaseRepository(db))
-	return db, NewRouter(customers, products, subscriptions, agents, cases)
+	identitySvc := identity.NewService(agentRepo, store.NewSessionRepository(db))
+	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc)
 }
 
 func TestGetCustomersReturnsSeededCustomers(t *testing.T) {
