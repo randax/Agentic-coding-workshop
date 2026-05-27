@@ -346,6 +346,51 @@ export interface PipelineStage {
   items: ModuleRecord[];
 }
 
+// --- Studio (custom field definitions) -----------------------------------
+
+export interface FieldDef {
+  id: number;
+  module: string;
+  name: string;
+  type: FieldType;
+  label: string;
+  options?: string[];
+}
+
+export interface FieldDefInput {
+  module: string;
+  name: string;
+  type: FieldType;
+  label: string;
+  options?: string[];
+}
+
+/** Lists the custom fields defined on a module. */
+export async function getCustomFields(
+  module: string,
+  cookie?: string,
+): Promise<FieldDef[]> {
+  const res = await fetch(`${API_BASE_URL}/studio/fields?module=${module}`, authGet(cookie));
+  if (!res.ok) {
+    throw new Error(`Failed to load custom fields (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<FieldDef[]>;
+}
+
+/** Defines a new custom field on a module (admin only). */
+export async function addCustomField(input: FieldDefInput): Promise<FieldDef> {
+  const res = await fetch(`${API_BASE_URL}/studio/fields`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to add custom field (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<FieldDef>;
+}
+
 /** Runs a record action (e.g. convert a lead), substituting the id into its path. */
 export async function runRecordAction(
   action: ActionMeta,

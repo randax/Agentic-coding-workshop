@@ -100,6 +100,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
           >
             Subscriptions
           </Link>
+          {user.role === "admin" && (
+            <Link
+              href="/studio"
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              Studio
+            </Link>
+          )}
           <div className="ml-auto flex items-center gap-3 text-sm text-gray-500">
             <span>
               {user.name}
