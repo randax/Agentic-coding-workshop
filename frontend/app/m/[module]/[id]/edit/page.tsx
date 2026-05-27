@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import {
   getModuleMeta,
@@ -15,14 +16,15 @@ export default async function ModuleEditPage({
   params: Promise<{ module: string; id: string }>;
 }) {
   const { module, id } = await params;
+  const cookie = (await cookies()).toString();
 
   let meta: ModuleMeta;
   let record: ModuleRecord | null;
 
   try {
     [meta, record] = await Promise.all([
-      getModuleMeta(module),
-      getModuleRecord(module, id),
+      getModuleMeta(module, cookie),
+      getModuleRecord(module, id, cookie),
     ]);
     if (record === null) notFound();
   } catch (e) {

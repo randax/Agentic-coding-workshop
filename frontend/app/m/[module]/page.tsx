@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import {
   getModuleMeta,
   getModuleRecords,
@@ -17,14 +18,15 @@ export default async function ModuleListPage({
   params: Promise<{ module: string }>;
 }) {
   const { module } = await params;
+  const cookie = (await cookies()).toString();
 
   let meta: ModuleMeta;
   let records: ModuleRecord[] = [];
 
   try {
     [meta, records] = await Promise.all([
-      getModuleMeta(module),
-      getModuleRecords(module),
+      getModuleMeta(module, cookie),
+      getModuleRecords(module, cookie),
     ]);
   } catch {
     return (
