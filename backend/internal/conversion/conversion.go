@@ -12,6 +12,7 @@ package conversion
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"saltcrm/internal/access"
 	"saltcrm/internal/agent"
@@ -32,6 +33,11 @@ var ErrNotQualified = errors.New("lead is not qualified")
 // ErrAlreadyConverted is returned when the lead has already been converted
 // (its ConvertedAccountID is set). Maps to HTTP 409.
 var ErrAlreadyConverted = errors.New("lead already converted")
+
+// ErrCompanyRequired is returned when the lead has no company. The company
+// becomes the new account's name, so without one we'd mint a nameless account —
+// which the customer domain forbids. Maps to HTTP 422.
+var ErrCompanyRequired = errors.New("lead has no company to convert into an account")
 
 // Plan is the fully field-mapped set of records a single conversion creates. The
 // service builds it; the repository persists it atomically. Account.AccountNumber
@@ -90,6 +96,9 @@ func (s *Service) Convert(ctx context.Context, viewer agent.Agent, leadID uint) 
 	}
 	if l.Status != lead.StatusQualified {
 		return Result{}, ErrNotQualified
+	}
+	if strings.TrimSpace(l.Company) == "" {
+		return Result{}, ErrCompanyRequired
 	}
 
 	plan := Plan{

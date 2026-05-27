@@ -19,7 +19,7 @@ export default function ConvertLeadButton({
 }: {
   leadId: number;
   status: string;
-  convertedAccountId?: number | null;
+  convertedAccountId?: number;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -46,8 +46,15 @@ export default function ConvertLeadButton({
     try {
       const { accountId } = await convertLead(leadId);
       router.push(`/m/accounts/${accountId}`);
-    } catch {
-      setError("Could not convert this lead. Is the backend running?");
+    } catch (e) {
+      // convertLead throws the backend's message for HTTP conflicts; a network
+      // failure has no such message, so fall back to the infrastructure hint.
+      const message = e instanceof Error && e.message ? e.message : "";
+      setError(
+        message && !/^Failed to convert lead/.test(message)
+          ? message
+          : "Could not convert this lead. Is the backend running?",
+      );
       setBusy(false);
     }
   }

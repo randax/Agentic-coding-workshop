@@ -156,3 +156,21 @@ func TestConvertUnknownLeadReturnsNotFound(t *testing.T) {
 		t.Fatalf("Convert error = %v, want ErrNotFound", err)
 	}
 }
+
+func TestConvertRejectsLeadWithNoCompany(t *testing.T) {
+	// Company maps to the account's Name, which every account must have. A
+	// qualified lead with no company can't form a valid account, so converting
+	// it is rejected rather than minting a nameless account.
+	l := qualifiedLead()
+	l.Company = "   " // blank after trimming
+	repo := &fakeRepo{lead: l}
+	svc := NewService(repo)
+
+	_, err := svc.Convert(context.Background(), viewer(), 7)
+	if !errors.Is(err, ErrCompanyRequired) {
+		t.Fatalf("Convert error = %v, want ErrCompanyRequired", err)
+	}
+	if repo.persistHit {
+		t.Error("a lead with no company must not be persisted")
+	}
+}

@@ -60,4 +60,16 @@ describe("ConvertLeadButton", () => {
       expect(push).toHaveBeenCalledWith("/m/accounts/100"),
     );
   });
+
+  it("surfaces the backend's conflict message instead of a generic error", async () => {
+    vi.mocked(convertLead).mockRejectedValue(new Error("lead already converted"));
+    render(<ConvertLeadButton leadId={7} status="qualified" />);
+
+    fireEvent.click(screen.getByRole("button", { name: /convert/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "lead already converted",
+    );
+    expect(push).not.toHaveBeenCalled();
+  });
 });

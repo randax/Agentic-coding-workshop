@@ -92,6 +92,10 @@ func (h *leadHandler) update(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "lead not found"})
 			return
 		}
+		if errors.Is(err, lead.ErrConvertedProtected) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		if errors.Is(err, lead.ErrNameRequired) || errors.Is(err, lead.ErrInvalidStatus) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return

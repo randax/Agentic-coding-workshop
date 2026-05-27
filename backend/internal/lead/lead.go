@@ -18,6 +18,12 @@ var ErrNameRequired = errors.New("lead name is required")
 // ErrInvalidStatus is returned when a lead's status is not a known value.
 var ErrInvalidStatus = errors.New("invalid lead status")
 
+// ErrConvertedProtected is returned when an edit tries to set a lead to the
+// terminal converted status, or to change a lead that is already converted.
+// Converted is managed solely by the conversion workflow (which also links the
+// account); a plain edit may not touch it.
+var ErrConvertedProtected = errors.New("converted status is managed by the convert action")
+
 // Status is a lead's position in the qualification funnel.
 type Status string
 
@@ -117,6 +123,11 @@ func (s *Service) Update(ctx context.Context, l Lead) (Lead, error) {
 	}
 	if !l.Status.Valid() {
 		return Lead{}, ErrInvalidStatus
+	}
+	// Converted is a terminal status owned by the conversion workflow: a plain
+	// edit can neither set it nor change an already-converted lead.
+	if existing.Status == StatusConverted || l.Status == StatusConverted {
+		return Lead{}, ErrConvertedProtected
 	}
 	existing.Name = l.Name
 	existing.Email = l.Email

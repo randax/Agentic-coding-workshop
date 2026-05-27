@@ -334,7 +334,14 @@ export async function convertLead(
     body: "{}",
   });
   if (!res.ok) {
-    throw new Error(`Failed to convert lead ${leadId} (HTTP ${res.status})`);
+    // Surface the backend's domain message (e.g. "lead already converted",
+    // "lead is not qualified") so a 409/422 conflict isn't misreported as an
+    // outage. Falls back to the status when no message is present.
+    const message = await res
+      .json()
+      .then((b) => (b as { error?: string }).error)
+      .catch(() => undefined);
+    throw new Error(message || `Failed to convert lead ${leadId} (HTTP ${res.status})`);
   }
   return res.json() as Promise<ConvertLeadResult>;
 }

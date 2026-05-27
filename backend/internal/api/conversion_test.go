@@ -135,6 +135,27 @@ func TestConvertAlreadyConvertedLeadReturns409(t *testing.T) {
 	}
 }
 
+func TestConvertLeadWithoutCompanyReturns422(t *testing.T) {
+	db, router := newTestRouter(t)
+	team := uint(1)
+	cookie := loginAs(t, db, router, "manager@isp.example", agent.RoleManager, &team)
+	me := agentByEmail(t, db, "manager@isp.example")
+	// Qualified, visible, but no company — can't form a named account.
+	l := lead.Lead{Name: "No Company", Email: "x@y.example", Status: lead.StatusQualified, AssignedUserID: &me.ID, TeamID: &team}
+	db.Create(&l)
+
+	rec := convert(t, router, l.ID, cookie)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want %d (no company to name the account); body=%s", rec.Code, http.StatusUnprocessableEntity, rec.Body.String())
+	}
+	var accounts int64
+	db.Model(&customer.Customer{}).Count(&accounts)
+	if accounts != 0 {
+		t.Errorf("found %d accounts, want 0 (nothing should be created)", accounts)
+	}
+}
+
 func TestConvertLeadOutsideScopeReturns404(t *testing.T) {
 	db, router := newTestRouter(t)
 	teamA := uint(1)
@@ -163,6 +184,32 @@ func TestConvertLeadRequiresAuth(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d (auth required); body=%s", rec.Code, http.StatusUnauthorized, rec.Body.String())
+	}
+}
+
+func TestEditingLeadToConvertedStatusReturns409(t *testing.T) {
+	db, router := newTestRouter(t)
+	cookie := loginAs(t, db, router, "manager@isp.example", agent.RoleManager, nil)
+	me := agentByEmail(t, db, "manager@isp.example")
+	l := lead.Lead{Name: "Sofia", Company: "Polar Foods", Status: lead.StatusQualified, AssignedUserID: &me.ID}
+	db.Create(&l)
+
+	// The generic edit form offers "converted" in the status enum; the backend
+	// must refuse to set the terminal status outside the convert workflow.
+	body := `{"name":"Sofia","company":"Polar Foods","status":"converted"}`
+	req := httptest.NewRequest(http.MethodPut, "/leads/"+strconv.FormatUint(uint64(l.ID), 10), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", cookie)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d (converted can't be set via edit); body=%s", rec.Code, http.StatusConflict, rec.Body.String())
+	}
+	var reloaded lead.Lead
+	db.First(&reloaded, l.ID)
+	if reloaded.Status != lead.StatusQualified {
+		t.Errorf("lead status = %q, want it unchanged (qualified)", reloaded.Status)
 	}
 }
 

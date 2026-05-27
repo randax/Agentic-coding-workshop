@@ -25,6 +25,8 @@ func (h *conversionHandler) convert(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid lead id"})
 		return
 	}
+	// The route is behind requireAuth + requireRole, so a user is always set;
+	// this guards against misconfiguration rather than a reachable request.
 	user, ok := currentUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
@@ -36,10 +38,10 @@ func (h *conversionHandler) convert(c *gin.Context) {
 		switch {
 		case errors.Is(err, conversion.ErrNotFound):
 			c.JSON(http.StatusNotFound, gin.H{"error": "lead not found"})
-		case errors.Is(err, conversion.ErrNotQualified):
+		case errors.Is(err, conversion.ErrNotQualified), errors.Is(err, conversion.ErrAlreadyConverted):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		case errors.Is(err, conversion.ErrAlreadyConverted):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case errors.Is(err, conversion.ErrCompanyRequired):
+			c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to convert lead"})
 		}

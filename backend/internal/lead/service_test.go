@@ -93,3 +93,33 @@ func TestUpdateUnknownReturnsNotFound(t *testing.T) {
 		t.Fatalf("Update error = %v, want ErrNotFound", err)
 	}
 }
+
+func TestUpdateCannotManuallySetConvertedStatus(t *testing.T) {
+	// `converted` is terminal and only the conversion workflow may set it (it
+	// also wires up ConvertedAccountID). A plain edit must not be able to flip a
+	// lead to converted, which would leave a converted lead with no account.
+	svc := NewService(newFakeRepo())
+	ctx := context.Background()
+	created, _ := svc.Create(ctx, Lead{Name: "Ada", Company: "Globex"})
+
+	created.Status = StatusConverted
+	_, err := svc.Update(ctx, created)
+	if !errors.Is(err, ErrConvertedProtected) {
+		t.Fatalf("Update error = %v, want ErrConvertedProtected", err)
+	}
+}
+
+func TestUpdateCannotEditAConvertedLead(t *testing.T) {
+	// A converted lead is terminal: editing it (e.g. reverting status) must be
+	// rejected so its link to the account it became stays consistent.
+	repo := newFakeRepo()
+	acc := uint(42)
+	repo.items[1] = Lead{ID: 1, Name: "Sofia", Company: "Polar Foods", Status: StatusConverted, ConvertedAccountID: &acc}
+	repo.nextID = 1
+	svc := NewService(repo)
+
+	_, err := svc.Update(context.Background(), Lead{ID: 1, Name: "Sofia (edited)", Company: "Polar Foods", Status: StatusQualified})
+	if !errors.Is(err, ErrConvertedProtected) {
+		t.Fatalf("Update error = %v, want ErrConvertedProtected", err)
+	}
+}
