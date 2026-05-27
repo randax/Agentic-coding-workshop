@@ -16,9 +16,13 @@ type Sort = { col: string; dir: "asc" | "desc" };
 export default function ListView({
   meta,
   records,
+  newHref,
 }: {
   meta: ModuleMeta;
   records: ModuleRecord[];
+  /** When set, shows a "New <singular>" action linking here. Omit for modules
+   * that aren't created standalone (e.g. subscriptions, activities). */
+  newHref?: string;
 }) {
   const fieldsByName = new Map(meta.fields.map((f) => [f.name, f]));
   const columns = meta.listView.columns
@@ -65,7 +69,7 @@ export default function ListView({
 
   return (
     <div>
-      <div className="border-b border-gray-100 bg-white p-3">
+      <div className="flex items-center justify-between gap-3 border-b border-gray-100 bg-white p-3">
         <input
           aria-label="Filter"
           placeholder="Filter…"
@@ -73,6 +77,14 @@ export default function ListView({
           onChange={(e) => setQuery(e.target.value)}
           className="w-64 rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+        {newHref && (
+          <Link
+            href={newHref}
+            className="rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+          >
+            New {meta.labelSingular.toLowerCase()}
+          </Link>
+        )}
       </div>
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">

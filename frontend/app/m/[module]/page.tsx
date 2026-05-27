@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import {
   getModuleMeta,
   getModuleRecords,
@@ -7,6 +8,17 @@ import {
   API_BASE_URL,
 } from "@/lib/api";
 import ListView from "./ListView";
+
+// Modules that support creating a standalone record through the generic UI
+// (matching the backend POST endpoints). Subscriptions are created per-account
+// and activities are logged against a parent, so they are intentionally absent.
+const CREATABLE_MODULES = new Set([
+  "accounts",
+  "contacts",
+  "leads",
+  "opportunities",
+  "products",
+]);
 
 /**
  * Generic module list page. Renders any registered module's records as a table
@@ -19,6 +31,8 @@ export default async function ModuleListPage({
 }) {
   const { module } = await params;
   const cookie = (await cookies()).toString();
+
+  const newHref = CREATABLE_MODULES.has(module) ? `/m/${module}/new` : undefined;
 
   let meta: ModuleMeta;
   let records: ModuleRecord[] = [];
@@ -52,11 +66,19 @@ export default async function ModuleListPage({
 
       {records.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500">
-          No {meta.label.toLowerCase()} yet.
+          <p>No {meta.label.toLowerCase()} yet.</p>
+          {newHref && (
+            <Link
+              href={newHref}
+              className="mt-4 inline-block rounded-md bg-gray-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800"
+            >
+              New {meta.labelSingular.toLowerCase()}
+            </Link>
+          )}
         </div>
       ) : (
         <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <ListView meta={meta} records={records} />
+          <ListView meta={meta} records={records} newHref={newHref} />
         </div>
       )}
     </main>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  createModuleRecord,
   updateModuleRecord,
   type FieldMeta,
   type ModuleMeta,
@@ -10,19 +11,21 @@ import {
 } from "@/lib/api";
 
 /**
- * Generic edit form. Renders one input per `editView` field, typed by the
- * field's metadata (string→text, enum→select, currency→number, bool→checkbox),
- * pre-filled from the record. On save it PUTs the values and returns to the
- * record view. Knows nothing about any specific module.
+ * Generic create/edit form. Renders one input per `editView` field, typed by
+ * the field's metadata (string→text, enum→select, currency→number,
+ * bool→checkbox). Given a `record` it edits (pre-filled, PUT); without one it
+ * creates a new record (blank, POST). Either way it navigates to the record
+ * afterwards. Knows nothing about any specific module.
  */
 export default function EditView({
   meta,
   record,
 }: {
   meta: ModuleMeta;
-  record: ModuleRecord;
+  record?: ModuleRecord;
 }) {
   const router = useRouter();
+  const isCreate = record === undefined;
   const fieldsByName = new Map(meta.fields.map((f) => [f.name, f]));
   const editFields = (meta.editView?.fields ?? [])
     .map((name) => fieldsByName.get(name))
@@ -30,7 +33,7 @@ export default function EditView({
 
   const [values, setValues] = useState<ModuleRecord>(() => {
     const initial: ModuleRecord = {};
-    for (const f of editFields) initial[f.name] = record[f.name] ?? "";
+    for (const f of editFields) initial[f.name] = record?.[f.name] ?? "";
     return initial;
   });
   const [busy, setBusy] = useState(false);
@@ -45,8 +48,10 @@ export default function EditView({
     setBusy(true);
     setError(null);
     try {
-      await updateModuleRecord(meta.module, record.id as number, values);
-      router.push(`/m/${meta.module}/${record.id}`);
+      const saved = isCreate
+        ? await createModuleRecord(meta.module, values)
+        : await updateModuleRecord(meta.module, record.id as number, values);
+      router.push(`/m/${meta.module}/${saved.id}`);
       router.refresh();
     } catch {
       setError("Could not save. Check the fields and that the backend is running.");
@@ -80,7 +85,7 @@ export default function EditView({
         disabled={busy}
         className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-gray-800 disabled:opacity-50"
       >
-        Save changes
+        {isCreate ? "Create" : "Save changes"}
       </button>
     </form>
   );

@@ -112,11 +112,6 @@ func (s *Service) OpenTasksForUser(ctx context.Context, userID uint) ([]Activity
 	return tasks, nil
 }
 
-// Get returns a single activity by ID, or ErrNotFound.
-func (s *Service) Get(ctx context.Context, id uint) (Activity, error) {
-	return s.repo.Get(ctx, id)
-}
-
 // Log records a new activity. New activities default to open status and to the
 // current time if no occurrence time is given.
 func (s *Service) Log(ctx context.Context, a Activity) (Activity, error) {

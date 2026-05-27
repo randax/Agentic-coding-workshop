@@ -74,6 +74,19 @@ describe("generic ListView", () => {
     expect(screen.queryByText("Fiber 500")).not.toBeInTheDocument();
   });
 
+  it("shows a 'New <singular>' action linking to the create page when creation is enabled", () => {
+    render(<ListView meta={productsMeta} records={[]} newHref="/m/products/new" />);
+    expect(screen.getByRole("link", { name: /new product/i })).toHaveAttribute(
+      "href",
+      "/m/products/new",
+    );
+  });
+
+  it("omits the create action when no newHref is given", () => {
+    render(<ListView meta={productsMeta} records={[]} />);
+    expect(screen.queryByRole("link", { name: /new product/i })).not.toBeInTheDocument();
+  });
+
   it("sorts by a column when its header is clicked", () => {
     render(<ListView meta={productsMeta} records={many} />);
 
