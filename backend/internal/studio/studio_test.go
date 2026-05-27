@@ -30,7 +30,7 @@ func (f *fakeRepo) ListByModule(ctx context.Context, module string) ([]FieldDef,
 }
 
 func TestAddFieldStoresDefinition(t *testing.T) {
-	svc := NewService(newFakeRepo())
+	svc := NewService(newFakeRepo(), newFakeLayoutRepo())
 
 	got, err := svc.AddField(context.Background(), FieldDef{Module: "accounts", Name: "churnRisk", Type: "enum", Label: "Churn risk", Options: []string{"low", "high"}})
 	if err != nil {
@@ -42,7 +42,7 @@ func TestAddFieldStoresDefinition(t *testing.T) {
 }
 
 func TestAddFieldValidates(t *testing.T) {
-	svc := NewService(newFakeRepo())
+	svc := NewService(newFakeRepo(), newFakeLayoutRepo())
 	ctx := context.Background()
 
 	if _, err := svc.AddField(ctx, FieldDef{Module: "accounts", Type: "string", Label: "X"}); !errors.Is(err, ErrNameRequired) {
@@ -57,7 +57,7 @@ func TestAddFieldValidates(t *testing.T) {
 }
 
 func TestListByModuleFilters(t *testing.T) {
-	svc := NewService(newFakeRepo())
+	svc := NewService(newFakeRepo(), newFakeLayoutRepo())
 	ctx := context.Background()
 	svc.AddField(ctx, FieldDef{Module: "accounts", Name: "a", Type: "string", Label: "A"})
 	svc.AddField(ctx, FieldDef{Module: "accounts", Name: "b", Type: "string", Label: "B"})

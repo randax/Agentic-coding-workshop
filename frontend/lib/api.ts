@@ -282,12 +282,17 @@ function authGet(cookie?: string): RequestInit {
   return init;
 }
 
-/** Fetches a module's metadata (fields + view layouts). Always fresh (uncached). */
+/** Fetches a module's metadata (fields + view layouts). Always fresh (uncached).
+ * With `{ raw: true }` the backend returns the code+custom defaults *without*
+ * saved layouts applied — the design-time palette the layout editor needs to
+ * show currently-hidden fields. */
 export async function getModuleMeta(
   module: string,
   cookie?: string,
+  opts?: { raw?: boolean },
 ): Promise<ModuleMeta> {
-  const res = await fetch(`${API_BASE_URL}/metadata/${module}`, authGet(cookie));
+  const qs = opts?.raw ? "?raw=1" : "";
+  const res = await fetch(`${API_BASE_URL}/metadata/${module}${qs}`, authGet(cookie));
   if (!res.ok) {
     throw new Error(`Failed to load metadata for ${module} (HTTP ${res.status})`);
   }
@@ -389,6 +394,45 @@ export async function addCustomField(input: FieldDefInput): Promise<FieldDef> {
     throw new Error(`Failed to add custom field (HTTP ${res.status})`);
   }
   return res.json() as Promise<FieldDef>;
+}
+
+// --- Studio (view layouts) ------------------------------------------------
+
+/** A module's saved layouts: the ordered, visible field names per view. A view
+ * with no saved layout is absent (the generic views fall back to its default). */
+export interface ModuleLayouts {
+  list?: string[];
+  detail?: string[];
+  edit?: string[];
+}
+
+/** Fetches a module's saved view layouts (empty object if none saved). */
+export async function getLayouts(
+  module: string,
+  cookie?: string,
+): Promise<ModuleLayouts> {
+  const res = await fetch(`${API_BASE_URL}/studio/layouts?module=${module}`, authGet(cookie));
+  if (!res.ok) {
+    throw new Error(`Failed to load layouts (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleLayouts>;
+}
+
+/** Saves a module's view layouts (admin only). Each provided view replaces its
+ * saved layout; the values are the ordered, visible field names for that view. */
+export async function saveLayouts(
+  module: string,
+  views: ModuleLayouts,
+): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/studio/layouts`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ module, views }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to save layout (HTTP ${res.status})`);
+  }
 }
 
 /** Runs a record action (e.g. convert a lead), substituting the id into its path. */

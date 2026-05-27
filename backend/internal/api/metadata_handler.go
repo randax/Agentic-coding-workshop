@@ -17,7 +17,7 @@ type metadataHandler struct {
 
 func (h *metadataHandler) get(c *gin.Context) {
 	module := c.Param("module")
-	m, err := h.reg.Get(module)
+	base, err := h.reg.Get(module)
 	if err != nil {
 		if errors.Is(err, metadata.ErrUnknownModule) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "unknown module"})
@@ -26,30 +26,44 @@ func (h *metadataHandler) get(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load module metadata"})
 		return
 	}
-	h.mergeCustomFields(c, module, &m)
-	c.JSON(http.StatusOK, m)
+	// ?raw=1 serves the code+custom defaults without saved layouts applied — the
+	// design-time palette the Studio layout editor needs to show hidden fields.
+	var layouts map[string][]string
+	if c.Query("raw") == "" {
+		layouts = h.savedLayouts(c, module)
+	}
+	c.JSON(http.StatusOK, metadata.Resolve(base, h.customFields(c, module), layouts))
 }
 
-// mergeCustomFields appends a module's runtime custom fields (from Studio) onto
-// its code-defined metadata, so the generic views render and edit them.
-func (h *metadataHandler) mergeCustomFields(c *gin.Context, module string, m *metadata.ModuleMeta) {
+// customFields converts a module's runtime custom-field definitions (from
+// Studio) into metadata fields for merging into its code-defined metadata.
+func (h *metadataHandler) customFields(c *gin.Context, module string) []metadata.Field {
 	if h.studio == nil {
-		return
+		return nil
 	}
 	defs, err := h.studio.ListByModule(c.Request.Context(), module)
-	if err != nil || len(defs) == 0 {
-		return
+	if err != nil {
+		return nil
 	}
-	var names []string
+	out := make([]metadata.Field, 0, len(defs))
 	for _, d := range defs {
-		m.Fields = append(m.Fields, metadata.Field{
+		out = append(out, metadata.Field{
 			Name: d.Name, Type: metadata.FieldType(d.Type), Label: d.Label, Options: d.Options, Custom: true,
 		})
-		m.ListView.Columns = append(m.ListView.Columns, d.Name)
-		m.EditView.Fields = append(m.EditView.Fields, d.Name)
-		names = append(names, d.Name)
 	}
-	m.DetailView.Panels = append(m.DetailView.Panels, metadata.Panel{Label: "Custom fields", Fields: names})
+	return out
+}
+
+// savedLayouts returns the module's saved view layouts, or nil if none/unavailable.
+func (h *metadataHandler) savedLayouts(c *gin.Context, module string) map[string][]string {
+	if h.studio == nil {
+		return nil
+	}
+	layouts, err := h.studio.GetLayouts(c.Request.Context(), module)
+	if err != nil {
+		return nil
+	}
+	return layouts
 }
 
 // defaultRegistry registers the metadata for every module the generic views can

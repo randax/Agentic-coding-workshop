@@ -53,7 +53,7 @@ func main() {
 	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
 	conversions := conversion.NewService(store.NewConversionRepository(db))
 	activities := activity.NewService(store.NewActivityRepository(db))
-	studioSvc := studio.NewService(store.NewFieldDefRepository(db))
+	studioSvc := studio.NewService(store.NewFieldDefRepository(db), store.NewLayoutDefRepository(db))
 	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, conversions, activities, studioSvc)
 
 	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)

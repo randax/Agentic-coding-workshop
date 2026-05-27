@@ -53,7 +53,7 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
 	conversions := conversion.NewService(store.NewConversionRepository(db))
 	activities := activity.NewService(store.NewActivityRepository(db))
-	studioSvc := studio.NewService(store.NewFieldDefRepository(db))
+	studioSvc := studio.NewService(store.NewFieldDefRepository(db), store.NewLayoutDefRepository(db))
 	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, conversions, activities, studioSvc)
 }
 

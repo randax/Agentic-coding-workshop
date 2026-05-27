@@ -1,8 +1,10 @@
-// Package studio owns runtime custom-field definitions. Admins add custom
-// fields to a module; the definitions live in fields_meta and are merged into a
-// module's metadata so the generic views render them, while the values live in
-// each record's custom_fields JSON. The service depends on the Repository
-// interface, not a database, so it is unit-testable in isolation.
+// Package studio owns runtime Studio configuration: custom-field definitions
+// and view layouts. Admins add custom fields to a module (definitions live in
+// fields_meta and are merged into a module's metadata so the generic views
+// render them, while the values live in each record's custom_fields JSON) and
+// arrange layouts (which fields/columns/panels appear and in what order, stored
+// in layout_meta). The service depends on repository interfaces, not a
+// database, so it is unit-testable in isolation.
 package studio
 
 import (
@@ -41,14 +43,15 @@ type Repository interface {
 	ListByModule(ctx context.Context, module string) ([]FieldDef, error)
 }
 
-// Service owns custom-field-definition logic.
+// Service owns Studio configuration: custom-field definitions and view layouts.
 type Service struct {
-	repo Repository
+	repo    Repository
+	layouts LayoutRepository
 }
 
-// NewService wires a Service to its repository.
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+// NewService wires a Service to its custom-field and layout repositories.
+func NewService(repo Repository, layouts LayoutRepository) *Service {
+	return &Service{repo: repo, layouts: layouts}
 }
 
 // AddField defines a new custom field on a module, after validation.

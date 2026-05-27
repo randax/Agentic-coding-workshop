@@ -47,5 +47,6 @@ func Migrate(db *gorm.DB) error {
 		&opportunity.LineItem{},
 		&activity.Activity{},
 		&studio.FieldDef{},
+		&studio.LayoutDef{},
 	)
 }
