@@ -375,7 +375,30 @@ func seedOpportunities(db *gorm.DB) error {
 			AssignedUserID:    c.AssignedUserID,
 		})
 	}
-	return db.Create(&opps).Error
+	if err := db.Create(&opps).Error; err != nil {
+		return err
+	}
+
+	// Add a product line item to each opportunity (snapshotting name + price).
+	var products []product.Product
+	db.Order("id").Find(&products)
+	if len(products) == 0 {
+		return nil
+	}
+	var items []opportunity.LineItem
+	for i, o := range opps {
+		p := products[i%len(products)]
+		qty := (i % 3) + 1
+		items = append(items, opportunity.LineItem{
+			OpportunityID: o.ID,
+			ProductID:     p.ID,
+			ProductName:   p.Name,
+			UnitPrice:     p.MonthlyPrice,
+			Quantity:      qty,
+			LineTotal:     p.MonthlyPrice * float64(qty),
+		})
+	}
+	return db.Create(&items).Error
 }
 
 func seedProducts(db *gorm.DB) error {

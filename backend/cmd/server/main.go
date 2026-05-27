@@ -47,7 +47,8 @@ func main() {
 	contacts := contact.NewService(store.NewContactRepository(db))
 	leads := lead.NewService(store.NewLeadRepository(db))
 	opportunities := opportunity.NewService(store.NewOpportunityRepository(db))
-	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities)
+	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
+	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems)
 
 	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {

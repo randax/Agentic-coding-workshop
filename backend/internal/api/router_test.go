@@ -47,7 +47,8 @@ func newTestRouter(t *testing.T) (*gorm.DB, http.Handler) {
 	contacts := contact.NewService(store.NewContactRepository(db))
 	leads := lead.NewService(store.NewLeadRepository(db))
 	opportunities := opportunity.NewService(store.NewOpportunityRepository(db))
-	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities)
+	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
+	return db, NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems)
 }
 
 func TestGetCustomersReturnsSeededCustomers(t *testing.T) {

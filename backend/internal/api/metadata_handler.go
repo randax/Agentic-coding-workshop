@@ -137,6 +137,18 @@ func defaultRegistry() *metadata.Registry {
 			{Label: "Opportunity", Fields: []string{"name", "amount", "stage", "probability", "expectedCloseDate"}},
 		}},
 		EditView: metadata.EditView{Fields: []string{"name", "amount", "stage"}},
+		Subpanels: []metadata.Subpanel{
+			{
+				Label: "Line items",
+				Path:  "/opportunities/{id}/line-items",
+				Columns: []metadata.Field{
+					{Name: "productName", Type: metadata.FieldString, Label: "Product"},
+					{Name: "quantity", Type: metadata.FieldString, Label: "Qty"},
+					{Name: "unitPrice", Type: metadata.FieldCurrency, Label: "Unit price"},
+					{Name: "lineTotal", Type: metadata.FieldCurrency, Label: "Total"},
+				},
+			},
+		},
 	})
 	return r
 }
