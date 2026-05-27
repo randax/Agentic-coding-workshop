@@ -120,6 +120,9 @@ func defaultRegistry() *metadata.Registry {
 			{Label: "Lead", Fields: []string{"name", "company", "email", "phone", "status"}},
 		}},
 		EditView: metadata.EditView{Fields: []string{"name", "company", "email", "phone", "status"}},
+		Actions: []metadata.Action{
+			{Label: "Convert", Method: "POST", Path: "/leads/{id}/convert"},
+		},
 	})
 	r.Register(metadata.ModuleMeta{
 		Module:        "opportunities",

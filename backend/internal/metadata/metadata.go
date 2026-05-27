@@ -50,6 +50,15 @@ type EditView struct {
 	Fields []string `json:"fields"`
 }
 
+// Action is a button on a record view that POSTs to an endpoint (with "{id}"
+// replaced by the record's id) — e.g. converting a lead. Generic so any module
+// can declare record-level actions without bespoke UI.
+type Action struct {
+	Label  string `json:"label"`
+	Method string `json:"method"`
+	Path   string `json:"path"`
+}
+
 // Subpanel describes a related-records panel on a record view. It is
 // self-contained: Path is the records endpoint (with "{id}" replaced by the
 // parent record's id) and Columns are the fields to show, so a subpanel renders
@@ -71,6 +80,7 @@ type ModuleMeta struct {
 	DetailView    DetailView `json:"detailView"`
 	EditView      EditView   `json:"editView"`
 	Subpanels     []Subpanel `json:"subpanels"`
+	Actions       []Action   `json:"actions,omitempty"`
 }
 
 // ErrUnknownModule is returned by Registry.Get for a module that was never registered.

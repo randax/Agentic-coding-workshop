@@ -50,6 +50,11 @@ type Lead struct {
 
 	AssignedUserID *uint `json:"assignedUserId,omitempty"`
 	TeamID         *uint `json:"teamId,omitempty"`
+
+	// Set when the lead is converted, linking it to what it became.
+	ConvertedAccountID     *uint `json:"convertedAccountId,omitempty"`
+	ConvertedContactID     *uint `json:"convertedContactId,omitempty"`
+	ConvertedOpportunityID *uint `json:"convertedOpportunityId,omitempty"`
 }
 
 // Repository is the persistence seam the service depends on.
