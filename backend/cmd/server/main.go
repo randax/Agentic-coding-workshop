@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"saltcrm/internal/activity"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/api"
 	"saltcrm/internal/contact"
@@ -50,7 +51,8 @@ func main() {
 	opportunities := opportunity.NewService(store.NewOpportunityRepository(db))
 	lineItems := opportunity.NewLineItemService(store.NewLineItemRepository(db))
 	conversions := conversion.NewService(store.NewConversionRepository(db))
-	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, conversions)
+	activities := activity.NewService(store.NewActivityRepository(db))
+	router := api.NewRouter(customers, products, subscriptions, agents, cases, identitySvc, contacts, leads, opportunities, lineItems, conversions, activities)
 
 	log.Printf("SaltCRM API listening on %s (db: %s)", addr, dsn)
 	if err := http.ListenAndServe(addr, router); err != nil {

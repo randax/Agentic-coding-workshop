@@ -95,6 +95,16 @@ func defaultRegistry() *metadata.Registry {
 					{Name: "monthlyPriceSnapshot", Type: metadata.FieldCurrency, Label: "Monthly price"},
 				},
 			},
+			{
+				Label: "Activities",
+				Path:  "/activities?parentType=account&parentId={id}",
+				Columns: []metadata.Field{
+					{Name: "type", Type: metadata.FieldString, Label: "Type"},
+					{Name: "subject", Type: metadata.FieldString, Label: "Subject"},
+					{Name: "status", Type: metadata.FieldString, Label: "Status"},
+					{Name: "occurredAt", Type: metadata.FieldDate, Label: "When"},
+				},
+			},
 		},
 	})
 	r.Register(metadata.ModuleMeta{
@@ -175,6 +185,21 @@ func defaultRegistry() *metadata.Registry {
 		ListView: metadata.ListView{Columns: []string{"status", "quantity", "monthlyPriceSnapshot", "startDate"}},
 		DetailView: metadata.DetailView{Panels: []metadata.Panel{
 			{Label: "Subscription", Fields: []string{"status", "quantity", "monthlyPriceSnapshot", "startDate"}},
+		}},
+	})
+	r.Register(metadata.ModuleMeta{
+		Module:        "activities",
+		Label:         "Activities",
+		LabelSingular: "Activity",
+		Fields: []metadata.Field{
+			{Name: "type", Type: metadata.FieldEnum, Label: "Type", Options: []string{"call", "meeting", "task"}},
+			{Name: "subject", Type: metadata.FieldString, Label: "Subject"},
+			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"open", "done"}},
+			{Name: "occurredAt", Type: metadata.FieldDate, Label: "When"},
+		},
+		ListView: metadata.ListView{Columns: []string{"type", "subject", "status", "occurredAt"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Activity", Fields: []string{"type", "subject", "status", "occurredAt"}},
 		}},
 	})
 	return r
