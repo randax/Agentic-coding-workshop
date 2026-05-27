@@ -101,6 +101,9 @@ func NewRouter(
 	mh := &metadataHandler{reg: defaultRegistry(), studio: studioSvc}
 	r.GET("/metadata/:module", mh.get)
 
+	dh := &dashboardHandler{cases: cases, activities: activities, leads: leads, opportunities: opportunities}
+	r.GET("/dashboard", requireAuth(identitySvc), dh.get)
+
 	sth := &studioHandler{svc: studioSvc}
 	studioGroup := r.Group("/studio", requireAuth(identitySvc))
 	studioGroup.GET("/fields", sth.listFields)

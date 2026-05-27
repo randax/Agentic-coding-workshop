@@ -33,6 +33,20 @@ func (r *CaseRepository) ListByCustomer(ctx context.Context, customerID uint) ([
 	return cases, nil
 }
 
+// ListByAssignee returns the cases assigned to an agent, newest first, with the
+// assigned agent preloaded for display.
+func (r *CaseRepository) ListByAssignee(ctx context.Context, agentID uint) ([]supportcase.Case, error) {
+	var cases []supportcase.Case
+	if err := r.db.WithContext(ctx).
+		Preload("AssignedAgent").
+		Where("assigned_agent_id = ?", agentID).
+		Order("created_at desc").
+		Find(&cases).Error; err != nil {
+		return nil, err
+	}
+	return cases, nil
+}
+
 // Create inserts a new case.
 func (r *CaseRepository) Create(ctx context.Context, c *supportcase.Case) error {
 	return r.db.WithContext(ctx).Create(c).Error

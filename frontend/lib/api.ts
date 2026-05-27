@@ -351,6 +351,42 @@ export interface PipelineStage {
   items: ModuleRecord[];
 }
 
+// --- Dashboard ------------------------------------------------------------
+
+/** A task on the "My Tasks" dashlet. */
+export interface DashboardTask {
+  id: number;
+  subject: string;
+  status: string;
+  /** ISO-8601 timestamp. */
+  occurredAt: string;
+}
+
+/** A lead on the "Recent Leads" dashlet. */
+export interface DashboardLead {
+  id: number;
+  name: string;
+  company: string;
+  status: string;
+}
+
+/** The signed-in user's dashboard: each dashlet already scoped to what they see. */
+export interface DashboardData {
+  myOpenCases: Case[];
+  myTasks: DashboardTask[];
+  recentLeads: DashboardLead[];
+  pipelineByStage: PipelineStage[];
+}
+
+/** Fetches the signed-in user's dashboard (all dashlets). Always fresh. */
+export async function getDashboard(cookie?: string): Promise<DashboardData> {
+  const res = await fetch(`${API_BASE_URL}/dashboard`, authGet(cookie));
+  if (!res.ok) {
+    throw new Error(`Failed to load dashboard (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<DashboardData>;
+}
+
 // --- Studio (custom field definitions) -----------------------------------
 
 export interface FieldDef {
