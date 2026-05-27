@@ -10,6 +10,7 @@ import {
   API_BASE_URL,
 } from "@/lib/api";
 import RecordView, { type SubpanelData } from "../RecordView";
+import { accountSubpanelOverrides } from "@/components/account/accountSubpanels";
 
 export default async function ModuleRecordPage({
   params,
@@ -22,6 +23,9 @@ export default async function ModuleRecordPage({
   let meta: ModuleMeta;
   let record: ModuleRecord | null;
   let subpanels: SubpanelData[] = [];
+  // Accounts get bespoke Cases/Subscriptions subpanels (with create/cancel
+  // actions); every other module's subpanels are the generic read-only tables.
+  let subpanelOverrides: Record<string, React.ReactNode> | undefined;
 
   try {
     [meta, record] = await Promise.all([
@@ -29,10 +33,18 @@ export default async function ModuleRecordPage({
       getModuleRecord(module, id, cookie),
     ]);
     if (record === null) notFound();
+    if (module === "accounts") {
+      subpanelOverrides = await accountSubpanelOverrides(id);
+    }
     subpanels = await Promise.all(
       (meta.subpanels ?? []).map(async (sp) => ({
         meta: sp,
-        records: await getSubpanelRecords(sp.path, id, cookie),
+        // Overridden subpanels render their own body, so skip fetching the
+        // generic records for them.
+        records:
+          subpanelOverrides?.[sp.label] !== undefined
+            ? []
+            : await getSubpanelRecords(sp.path, id, cookie),
       })),
     );
   } catch (e) {
@@ -56,7 +68,12 @@ export default async function ModuleRecordPage({
         ← {meta.label}
       </Link>
       <div className="mt-4">
-        <RecordView meta={meta} record={record!} subpanels={subpanels} />
+        <RecordView
+          meta={meta}
+          record={record!}
+          subpanels={subpanels}
+          subpanelOverrides={subpanelOverrides}
+        />
       </div>
     </main>
   );

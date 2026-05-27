@@ -23,10 +23,15 @@ export default function RecordView({
   meta,
   record,
   subpanels,
+  subpanelOverrides,
 }: {
   meta: ModuleMeta;
   record: ModuleRecord;
   subpanels: SubpanelData[];
+  /** Bespoke body for a subpanel, keyed by its label. When present, it replaces
+   * the generic read-only table for that subpanel (e.g. an account's Cases and
+   * Subscriptions panels, which carry create/cancel actions). */
+  subpanelOverrides?: Record<string, React.ReactNode>;
 }) {
   const fieldsByName = new Map(meta.fields.map((f) => [f.name, f]));
   const panels = meta.detailView?.panels ?? [];
@@ -84,7 +89,9 @@ export default function RecordView({
           <h2 className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-xs font-medium uppercase tracking-wide text-gray-500">
             {sp.label}
           </h2>
-          {records.length === 0 ? (
+          {subpanelOverrides?.[sp.label] !== undefined ? (
+            <div className="p-4">{subpanelOverrides[sp.label]}</div>
+          ) : records.length === 0 ? (
             <p className="px-4 py-6 text-center text-sm text-gray-500">
               No related {sp.label.toLowerCase()}.
             </p>

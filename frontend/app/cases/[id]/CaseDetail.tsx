@@ -1,6 +1,6 @@
 import type { Case } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { STATUS_LABELS, STATUS_STYLES } from "@/app/customers/[id]/CaseList";
+import { STATUS_LABELS, STATUS_STYLES } from "@/app/cases/status";
 
 export default function CaseDetail({ caseItem }: { caseItem: Case }) {
   const comments = caseItem.comments ?? [];

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateCaseStatus, type CaseStatus } from "@/lib/api";
-import { STATUS_LABELS } from "@/app/customers/[id]/CaseList";
+import { STATUS_LABELS } from "@/app/cases/status";
 
 // Mirror of the backend lifecycle graph, used only to offer the agent the legal
 // next states. The backend remains the authority and rejects illegal moves.

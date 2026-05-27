@@ -66,6 +66,25 @@ describe("generic RecordView", () => {
     expect(within(row).getAllByRole("cell")[0]).toHaveTextContent("No internet");
   });
 
+  it("renders a subpanel override as the section body instead of the generic table", () => {
+    render(
+      <RecordView
+        meta={meta}
+        record={record}
+        subpanels={[
+          { meta: casesSubpanel, records: [{ id: 1, subject: "No internet", status: "open" }] },
+        ]}
+        subpanelOverrides={{ Cases: <div data-testid="cases-override">custom cases UI</div> }}
+      />,
+    );
+
+    // The Cases section still renders, but with the override as its body...
+    expect(screen.getByText("Cases")).toBeInTheDocument();
+    expect(screen.getByTestId("cases-override")).toBeInTheDocument();
+    // ...and not the generic table (the related record isn't shown as a row).
+    expect(screen.queryByText("No internet")).not.toBeInTheDocument();
+  });
+
   it("links to the edit view", () => {
     render(<RecordView meta={meta} record={record} subpanels={[]} />);
     expect(screen.getByRole("link", { name: /edit/i })).toHaveAttribute(

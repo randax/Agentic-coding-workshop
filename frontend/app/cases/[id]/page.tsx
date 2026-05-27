@@ -46,10 +46,10 @@ export default async function CaseDetailPage({
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
       <Link
-        href={`/customers/${caseItem.customerId}?tab=cases`}
+        href={`/m/accounts/${caseItem.customerId}`}
         className="text-sm text-gray-500 hover:text-gray-800"
       >
-        ← Back to cases
+        ← Back to account
       </Link>
       <div className="mt-4">
         <CaseDetail caseItem={caseItem} />
