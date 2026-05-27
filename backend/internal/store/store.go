@@ -42,5 +42,6 @@ func Migrate(db *gorm.DB) error {
 		&contact.Contact{},
 		&lead.Lead{},
 		&opportunity.Opportunity{},
+		&opportunity.LineItem{},
 	)
 }

@@ -33,6 +33,7 @@ func NewRouter(
 	contacts *contact.Service,
 	leads *lead.Service,
 	opportunities *opportunity.Service,
+	lineItems *opportunity.LineItemService,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -78,6 +79,10 @@ func NewRouter(
 	oppsGroup.GET("/pipeline", oh.pipeline) // before /:id so it isn't captured as an id
 	oppsGroup.GET("/:id", oh.get)
 	oppsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), oh.update)
+
+	liH := &lineItemHandler{svc: lineItems, products: products}
+	oppsGroup.GET("/:id/line-items", liH.list)
+	oppsGroup.POST("/:id/line-items", requireRole(agent.RoleManager, agent.RoleAdmin), liH.add)
 
 	mh := &metadataHandler{reg: defaultRegistry()}
 	r.GET("/metadata/:module", mh.get)
