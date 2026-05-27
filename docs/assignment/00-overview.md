@@ -1,8 +1,7 @@
 # Assignment: Rebuild lead-to-account conversion, the agentic way
 
 Welcome. In this assignment you'll act as an AI engineer on **SaltCRM** and
-ship a real feature using an agentic coding pipeline — the same one taught in
-the [AI Hero AI Engineer Workshop 2026](https://www.aihero.dev/ai-engineer-workshop-2026~dwnll).
+ship a real feature using an agentic coding pipeline.
 
 You won't hand-write the feature. You'll **direct an agent** to build it, by
 turning a vague client request into a sharp plan, the plan into a spec, the spec
