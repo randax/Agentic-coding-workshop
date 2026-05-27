@@ -5,10 +5,12 @@ package api
 import (
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 
 	"saltcrm/internal/agent"
 	"saltcrm/internal/customer"
+	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -23,11 +25,17 @@ func NewRouter(
 	subscriptions *subscription.Service,
 	agents *agent.Service,
 	cases *supportcase.Service,
+	identitySvc *identity.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(corsMiddleware())
+
+	auth := &authHandler{svc: identitySvc}
+	r.POST("/auth/login", auth.login)
+	r.POST("/auth/logout", auth.logout)
+	r.GET("/auth/me", auth.me)
 
 	ch := &customerHandler{svc: customers}
 	r.GET("/customers", ch.list)
@@ -70,10 +78,18 @@ func NewRouter(
 	return r
 }
 
-// corsMiddleware allows the Next.js dev frontend to call the API from the browser.
+// corsMiddleware allows the Next.js dev frontend to call the API from the
+// browser with credentials (the session cookie). Because credentials are
+// allowed, the origin must be explicit (not "*"); it defaults to the Next dev
+// server and can be overridden with SALTCRM_CORS_ORIGIN.
 func corsMiddleware() gin.HandlerFunc {
+	origin := os.Getenv("SALTCRM_CORS_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:3000"
+	}
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type")
 		if c.Request.Method == http.MethodOptions {

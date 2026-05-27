@@ -11,9 +11,11 @@ import (
 
 	"saltcrm/internal/agent"
 	"saltcrm/internal/customer"
+	"saltcrm/internal/identity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
+	"saltcrm/internal/team"
 
 	"gorm.io/gorm"
 )
@@ -48,10 +50,20 @@ func seedAgents(db *gorm.DB) error {
 		return nil
 	}
 
+	// One demo team for everyone, and a shared demo password so the seeded
+	// agents can log in. Roles span admin/manager/agent.
+	t := team.Team{Name: "Support"}
+	if err := db.Create(&t).Error; err != nil {
+		return err
+	}
+	hash, err := identity.HashPassword("password")
+	if err != nil {
+		return err
+	}
 	agents := []agent.Agent{
-		{Name: "Sam Carter", Email: "sam@isp.example"},
-		{Name: "Robin Diaz", Email: "robin@isp.example"},
-		{Name: "Lee Nakamura", Email: "lee@isp.example"},
+		{Name: "Sam Carter", Email: "sam@isp.example", PasswordHash: hash, Role: agent.RoleAdmin, TeamID: &t.ID},
+		{Name: "Robin Diaz", Email: "robin@isp.example", PasswordHash: hash, Role: agent.RoleManager, TeamID: &t.ID},
+		{Name: "Lee Nakamura", Email: "lee@isp.example", PasswordHash: hash, Role: agent.RoleAgent, TeamID: &t.ID},
 	}
 	return db.Create(&agents).Error
 }

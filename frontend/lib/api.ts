@@ -42,11 +42,18 @@ export interface Subscription {
   product: Product;
 }
 
+export type Role = "admin" | "manager" | "agent";
+
 export interface Agent {
   id: number;
   name: string;
   email: string;
+  role?: Role;
+  teamId?: number | null;
 }
+
+/** The authenticated user is an Agent (with a role). */
+export type AuthUser = Agent;
 
 export type CaseCategory =
   | "billing"
@@ -86,6 +93,54 @@ export interface Case {
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+
+// --- Authentication -------------------------------------------------------
+// Auth requests use credentials:"include" so the HTTP-only session cookie is
+// sent/received across the dev origins (Next :3000 ↔ API :8080).
+
+/** Thrown by login when the credentials are rejected (HTTP 401). */
+export class InvalidCredentialsError extends Error {}
+
+/** Logs in with email/password, establishing a session cookie. */
+export async function login(
+  email: string,
+  password: string,
+): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, password }),
+  });
+  if (res.status === 401) {
+    throw new InvalidCredentialsError("invalid email or password");
+  }
+  if (!res.ok) {
+    throw new Error(`Login failed (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<AuthUser>;
+}
+
+/** Ends the current session. */
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+}
+
+/** Returns the currently-authenticated user, or null if not logged in. */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (res.status === 401) return null;
+  if (!res.ok) {
+    throw new Error(`Failed to load current user (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<AuthUser>;
+}
 
 /** Optional filters for the customer list, forwarded to the backend as query params. */
 export interface CustomerFilters {
