@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import ListView from "./ListView";
 import type { ModuleMeta, ModuleRecord } from "@/lib/api";
@@ -31,6 +31,12 @@ const records: ModuleRecord[] = [
   },
 ];
 
+const many: ModuleRecord[] = [
+  { id: 1, name: "Fiber 500", category: "fiber", monthlyPrice: 499, available: true },
+  { id: 2, name: "Mesh Pro", category: "router", monthlyPrice: 99, available: true },
+  { id: 3, name: "TV Max", category: "tv", monthlyPrice: 299, available: false },
+];
+
 describe("generic ListView", () => {
   it("renders a column header per listView column, using field labels", () => {
     render(<ListView meta={productsMeta} records={[]} />);
@@ -48,5 +54,35 @@ describe("generic ListView", () => {
     expect(cells[1]).toHaveTextContent("Fiber"); // enum capitalized
     expect(cells[2]).toHaveTextContent("kr 499"); // currency
     expect(cells[3]).toHaveTextContent("Yes"); // bool
+  });
+
+  it("links each row to its record view", () => {
+    render(<ListView meta={productsMeta} records={records} />);
+    expect(screen.getByRole("link", { name: "Fiber 500" })).toHaveAttribute(
+      "href",
+      "/m/products/1",
+    );
+  });
+
+  it("filters rows by a free-text query across columns", () => {
+    render(<ListView meta={productsMeta} records={many} />);
+    expect(screen.getAllByRole("row")).toHaveLength(4); // header + 3
+
+    fireEvent.change(screen.getByLabelText(/filter/i), { target: { value: "mesh" } });
+
+    expect(screen.getByText("Mesh Pro")).toBeInTheDocument();
+    expect(screen.queryByText("Fiber 500")).not.toBeInTheDocument();
+  });
+
+  it("sorts by a column when its header is clicked", () => {
+    render(<ListView meta={productsMeta} records={many} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /name/i }));
+    const firstDataRow = screen.getAllByRole("row")[1];
+    expect(firstDataRow).toHaveTextContent("Fiber 500"); // asc: Fiber, Mesh, TV
+
+    fireEvent.click(screen.getByRole("button", { name: /name/i }));
+    const firstDataRowDesc = screen.getAllByRole("row")[1];
+    expect(firstDataRowDesc).toHaveTextContent("TV Max"); // desc
   });
 });

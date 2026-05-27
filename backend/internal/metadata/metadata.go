@@ -49,10 +49,14 @@ type EditView struct {
 	Fields []string `json:"fields"`
 }
 
-// Subpanel describes a related-records panel on a record view (stubbed for now).
+// Subpanel describes a related-records panel on a record view. It is
+// self-contained: Path is the records endpoint (with "{id}" replaced by the
+// parent record's id) and Columns are the fields to show, so a subpanel renders
+// without depending on another registered module.
 type Subpanel struct {
-	Module string `json:"module"`
-	Label  string `json:"label"`
+	Label   string  `json:"label"`
+	Path    string  `json:"path"`
+	Columns []Field `json:"columns"`
 }
 
 // ModuleMeta is the complete metadata for one module — the payload served at

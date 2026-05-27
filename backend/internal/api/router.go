@@ -38,12 +38,15 @@ func NewRouter(
 	// "Accounts" is the SaltCRM-facing name for customers; the generic /m/accounts
 	// views read records here. Legacy /customers routes above stay for now.
 	r.GET("/accounts", ch.list)
+	r.GET("/accounts/:id", ch.get)
+	r.PUT("/accounts/:id", ch.update)
 
 	mh := &metadataHandler{reg: defaultRegistry()}
 	r.GET("/metadata/:module", mh.get)
 
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)
+	r.GET("/products/:id", ph.get)
 	r.POST("/products", ph.create)
 	r.PUT("/products/:id", ph.update)
 	r.POST("/products/:id/retire", ph.retire)
