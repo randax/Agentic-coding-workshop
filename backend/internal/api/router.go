@@ -11,6 +11,7 @@ import (
 	"saltcrm/internal/access"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/contact"
+	"saltcrm/internal/conversion"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
@@ -34,6 +35,7 @@ func NewRouter(
 	leads *lead.Service,
 	opportunities *opportunity.Service,
 	lineItems *opportunity.LineItemService,
+	conversions *conversion.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -72,6 +74,8 @@ func NewRouter(
 	leadsGroup.GET("", lh.list)
 	leadsGroup.GET("/:id", lh.get)
 	leadsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), lh.update)
+	convH := &conversionHandler{svc: conversions}
+	leadsGroup.POST("/:id/convert", convH.convert)
 
 	oh := &opportunityHandler{svc: opportunities}
 	oppsGroup := r.Group("/opportunities", requireAuth(identitySvc))
