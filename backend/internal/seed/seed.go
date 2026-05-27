@@ -17,6 +17,7 @@ import (
 	"saltcrm/internal/lead"
 	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
+	"saltcrm/internal/studio"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
 	"saltcrm/internal/team"
@@ -55,7 +56,39 @@ func Demo(db *gorm.DB) error {
 	if err := seedActivities(db); err != nil {
 		return err
 	}
+	if err := seedCustomFields(db); err != nil {
+		return err
+	}
 	return seedCaseComments(db)
+}
+
+// seedCustomFields demonstrates Studio: a custom "Churn risk" field on accounts
+// plus a couple of values, so the generic views show custom data out of the box.
+func seedCustomFields(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&studio.FieldDef{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	if err := db.Create(&studio.FieldDef{
+		Module: "accounts", Name: "churnRisk", Type: "enum", Label: "Churn risk",
+		Options: []string{"low", "medium", "high"},
+	}).Error; err != nil {
+		return err
+	}
+
+	var customers []customer.Customer
+	db.Order("id").Limit(3).Find(&customers)
+	risks := []string{"low", "medium", "high"}
+	for i, c := range customers {
+		c.CustomFields = map[string]any{"churnRisk": risks[i%len(risks)]}
+		if err := db.Save(&c).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func seedActivities(db *gorm.DB) error {
