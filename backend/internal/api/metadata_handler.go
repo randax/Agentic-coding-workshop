@@ -97,12 +97,13 @@ func defaultRegistry() *metadata.Registry {
 			{Name: "phone", Type: metadata.FieldString, Label: "Phone"},
 			{Name: "serviceAddress", Type: metadata.FieldString, Label: "Service address"},
 			{Name: "accountNumber", Type: metadata.FieldString, Label: "Account number"},
+			{Name: "customerSince", Type: metadata.FieldDate, Label: "Customer since"},
 			{Name: "status", Type: metadata.FieldEnum, Label: "Status", Options: []string{"active", "suspended"}},
 		},
 		ListView: metadata.ListView{Columns: []string{"name", "email", "accountNumber", "status"}},
 		DetailView: metadata.DetailView{Panels: []metadata.Panel{
 			{Label: "Profile", Fields: []string{"name", "email", "phone", "serviceAddress"}},
-			{Label: "Account", Fields: []string{"accountNumber", "status"}},
+			{Label: "Account", Fields: []string{"accountNumber", "customerSince", "status"}},
 		}},
 		EditView: metadata.EditView{Fields: []string{"name", "email", "phone", "serviceAddress", "accountNumber", "status"}},
 		Subpanels: []metadata.Subpanel{

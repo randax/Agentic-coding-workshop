@@ -1,20 +1,6 @@
 // Typed client for the SaltCRM backend API. This is the single seam through
 // which the frontend talks to the Go backend; all data access goes through here.
 
-export type CustomerStatus = "active" | "suspended";
-
-export interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  serviceAddress: string;
-  accountNumber: string;
-  /** ISO-8601 timestamp. */
-  customerSince: string;
-  status: CustomerStatus;
-}
-
 export type ProductCategory = "fiber" | "router" | "tv";
 
 export interface Product {
@@ -140,30 +126,6 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     throw new Error(`Failed to load current user (HTTP ${res.status})`);
   }
   return res.json() as Promise<AuthUser>;
-}
-
-/** Optional filters for the customer list, forwarded to the backend as query params. */
-export interface CustomerFilters {
-  /** Partial, case-insensitive term matched against name, email, or account number. */
-  search?: string;
-  status?: CustomerStatus;
-}
-
-/** Fetches customers, optionally filtered by search term and status. Always fresh (uncached). */
-export async function getCustomers(
-  filters: CustomerFilters = {},
-): Promise<Customer[]> {
-  const params = new URLSearchParams();
-  if (filters.search) params.set("search", filters.search);
-  if (filters.status) params.set("status", filters.status);
-  const qs = params.toString();
-  const url = `${API_BASE_URL}/customers${qs ? `?${qs}` : ""}`;
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to load customers (HTTP ${res.status})`);
-  }
-  return res.json() as Promise<Customer[]>;
 }
 
 /** Editable product fields, sent to the backend on create and edit. The
@@ -723,61 +685,6 @@ export async function cancelSubscription(
     throw new Error(`Failed to cancel subscription (HTTP ${res.status})`);
   }
   return res.json() as Promise<Subscription>;
-}
-
-/** Editable customer profile fields, sent to the backend on create and edit. */
-export interface CustomerInput {
-  name: string;
-  email: string;
-  phone: string;
-  serviceAddress: string;
-  accountNumber: string;
-  status: CustomerStatus;
-}
-
-/** Creates a new customer. */
-export async function createCustomer(input: CustomerInput): Promise<Customer> {
-  const res = await fetch(`${API_BASE_URL}/customers`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to create customer (HTTP ${res.status})`);
-  }
-  return res.json() as Promise<Customer>;
-}
-
-/** Edits an existing customer's profile fields and status. */
-export async function updateCustomer(
-  id: string | number,
-  input: CustomerInput,
-): Promise<Customer> {
-  const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to update customer (HTTP ${res.status})`);
-  }
-  return res.json() as Promise<Customer>;
-}
-
-/** Fetches a single customer by id. Returns null if no such customer exists. */
-export async function getCustomer(
-  id: string | number,
-): Promise<Customer | null> {
-  const res = await fetch(`${API_BASE_URL}/customers/${id}`, {
-    cache: "no-store",
-  });
-  if (res.status === 404) {
-    return null;
-  }
-  if (!res.ok) {
-    throw new Error(`Failed to load customer (HTTP ${res.status})`);
-  }
-  return res.json() as Promise<Customer>;
 }
 
 // --- Reports --------------------------------------------------------------

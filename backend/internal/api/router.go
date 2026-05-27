@@ -53,11 +53,11 @@ func NewRouter(
 	r.POST("/auth/logout", auth.logout)
 	r.GET("/auth/me", auth.me)
 
+	// The customerHandler backs the authenticated, visibility-scoped /accounts
+	// surface below. The legacy unauthenticated /customers CRUD routes it also
+	// used to serve have been removed now that the generic /m/accounts views are
+	// live; the customer-scoped sub-resources (cases, subscriptions) remain.
 	ch := &customerHandler{svc: customers}
-	r.GET("/customers", ch.list)
-	r.POST("/customers", ch.create)
-	r.GET("/customers/:id", ch.get)
-	r.PUT("/customers/:id", ch.update)
 
 	// "Accounts" is the SaltCRM-facing name for customers; the generic /m/accounts
 	// views read records here. Unlike the legacy /customers routes above, the
