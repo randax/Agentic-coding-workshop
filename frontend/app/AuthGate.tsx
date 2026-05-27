@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser, logout, type AuthUser } from "@/lib/api";
+import GlobalSearch from "./GlobalSearch";
 
 /**
  * Client-side auth guard + app chrome. Resolves the current user from the
@@ -109,6 +110,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             </Link>
           )}
           <div className="ml-auto flex items-center gap-3 text-sm text-gray-500">
+            <GlobalSearch />
             <span>
               {user.name}
               {user.role ? ` · ${user.role}` : ""}

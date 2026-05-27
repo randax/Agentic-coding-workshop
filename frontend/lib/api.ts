@@ -387,6 +387,46 @@ export async function getDashboard(cookie?: string): Promise<DashboardData> {
   return res.json() as Promise<DashboardData>;
 }
 
+// --- Global search --------------------------------------------------------
+
+/** The modules global search spans. */
+export type SearchModule =
+  | "accounts"
+  | "contacts"
+  | "leads"
+  | "opportunities"
+  | "cases";
+
+/** A single matched record. */
+export interface SearchHit {
+  module: SearchModule;
+  id: number;
+  title: string;
+}
+
+/** Matched records for one module (already ranked by the backend). */
+export interface SearchGroup {
+  module: SearchModule;
+  hits: SearchHit[];
+}
+
+/** Runs a global search across modules, returning hits grouped by module —
+ * already scoped to what the signed-in user may see. Always fresh. */
+export async function globalSearch(
+  query: string,
+  cookie?: string,
+): Promise<SearchGroup[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`,
+    authGet(cookie),
+  );
+  if (!res.ok) {
+    throw new Error(`Search failed (HTTP ${res.status})`);
+  }
+  const body = (await res.json()) as { groups: SearchGroup[] };
+  return body.groups;
+}
+
 // --- Studio (custom field definitions) -----------------------------------
 
 export interface FieldDef {

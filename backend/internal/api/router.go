@@ -104,6 +104,9 @@ func NewRouter(
 	dh := &dashboardHandler{cases: cases, activities: activities, leads: leads, opportunities: opportunities}
 	r.GET("/dashboard", requireAuth(identitySvc), dh.get)
 
+	srch := &searchHandler{customers: customers, contacts: contacts, leads: leads, opportunities: opportunities, cases: cases}
+	r.GET("/search", requireAuth(identitySvc), srch.get)
+
 	sth := &studioHandler{svc: studioSvc}
 	studioGroup := r.Group("/studio", requireAuth(identitySvc))
 	studioGroup.GET("/fields", sth.listFields)
