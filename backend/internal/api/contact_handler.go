@@ -54,6 +54,26 @@ func (h *contactHandler) get(c *gin.Context) {
 	c.JSON(http.StatusOK, ct)
 }
 
+func (h *contactHandler) create(c *gin.Context) {
+	var ct contact.Contact
+	if err := c.ShouldBindJSON(&ct); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	ct.ID = 0
+	defaultOwner(c, &ct.AssignedUserID, &ct.TeamID)
+	created, err := h.svc.Create(c.Request.Context(), ct)
+	if err != nil {
+		if errors.Is(err, contact.ErrNameRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create contact"})
+		return
+	}
+	c.JSON(http.StatusCreated, created)
+}
+
 func (h *contactHandler) update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

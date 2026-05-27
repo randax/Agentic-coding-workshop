@@ -63,6 +63,26 @@ func (h *opportunityHandler) get(c *gin.Context) {
 	c.JSON(http.StatusOK, o)
 }
 
+func (h *opportunityHandler) create(c *gin.Context) {
+	var o opportunity.Opportunity
+	if err := c.ShouldBindJSON(&o); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	o.ID = 0
+	defaultOwner(c, &o.AssignedUserID, &o.TeamID)
+	created, err := h.svc.Create(c.Request.Context(), o)
+	if err != nil {
+		if errors.Is(err, opportunity.ErrNameRequired) || errors.Is(err, opportunity.ErrInvalidAmount) || errors.Is(err, opportunity.ErrInvalidStage) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create opportunity"})
+		return
+	}
+	c.JSON(http.StatusCreated, created)
+}
+
 func (h *opportunityHandler) update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

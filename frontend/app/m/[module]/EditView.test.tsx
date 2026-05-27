@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import EditView from "./EditView";
 import type { ModuleMeta, ModuleRecord } from "@/lib/api";
-import { updateModuleRecord } from "@/lib/api";
+import { updateModuleRecord, createModuleRecord } from "@/lib/api";
 
 const { push, refresh } = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
-  return { ...actual, updateModuleRecord: vi.fn() };
+  return { ...actual, updateModuleRecord: vi.fn(), createModuleRecord: vi.fn() };
 });
 
 const meta: ModuleMeta = {
@@ -52,5 +52,23 @@ describe("generic EditView", () => {
       );
     });
     await waitFor(() => expect(push).toHaveBeenCalledWith("/m/accounts/7"));
+  });
+
+  it("creates a new record via createModuleRecord when given no record, then navigates to it", async () => {
+    vi.mocked(createModuleRecord).mockResolvedValue({ id: 42, name: "New Co", status: "active" });
+    render(<EditView meta={meta} />);
+
+    // A create form starts blank rather than pre-filled.
+    expect(screen.getByLabelText("Name")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "New Co" } });
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    await waitFor(() =>
+      expect(createModuleRecord).toHaveBeenCalledWith(
+        "accounts",
+        expect.objectContaining({ name: "New Co" }),
+      ),
+    );
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/m/accounts/42"));
   });
 });

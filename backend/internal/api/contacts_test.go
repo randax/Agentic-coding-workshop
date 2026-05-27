@@ -80,6 +80,56 @@ func TestPutContactAsAgentIsForbidden(t *testing.T) {
 	}
 }
 
+func TestCreateContactAsAgentIsForbidden(t *testing.T) {
+	db, router := newTestRouter(t)
+	cookie := loginAs(t, db, router, "agent@isp.example", agent.RoleAgent, nil)
+
+	rec := authPost(t, router, "/contacts", cookie, `{"name":"Ada","email":"ada@x.example"}`)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d (agents can't create contacts)", rec.Code, http.StatusForbidden)
+	}
+}
+
+func TestCreateContactRejectsMissingName(t *testing.T) {
+	db, router := newTestRouter(t)
+	cookie := loginAs(t, db, router, "manager@isp.example", agent.RoleManager, nil)
+
+	rec := authPost(t, router, "/contacts", cookie, `{"email":"noname@x.example"}`)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d (name required); body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+}
+
+func TestCreateContactAssignsCreatorAsOwnerSoItIsVisible(t *testing.T) {
+	db, router := newTestRouter(t)
+	team := uint(1)
+	cookie := loginAs(t, db, router, "manager@isp.example", agent.RoleManager, &team)
+	// A contact owned by someone else on another team — must stay invisible.
+	otherUser, otherTeam := uint(999), uint(2)
+	db.Create(&contact.Contact{Name: "Not Mine", AssignedUserID: &otherUser, TeamID: &otherTeam})
+
+	rec := authPost(t, router, "/contacts", cookie, `{"name":"Ada Lovelace","email":"ada@x.example","accountId":1}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	var created contact.Contact
+	json.Unmarshal(rec.Body.Bytes(), &created)
+	if created.ID == 0 || created.Name != "Ada Lovelace" {
+		t.Fatalf("created = %+v, want a persisted contact with an id", created)
+	}
+
+	// The manager (a non-admin) must see the contact they just created — it is
+	// only visible if the create defaulted the owner to them.
+	listRec := authGet(t, router, "/contacts", cookie)
+	var got []contact.Contact
+	json.Unmarshal(listRec.Body.Bytes(), &got)
+	if len(got) != 1 || got[0].ID != created.ID {
+		t.Fatalf("manager's list = %+v, want the contact they created (owner defaulted to creator)", got)
+	}
+}
+
 func TestGetContactsMetadataReturnsContract(t *testing.T) {
 	_, router := newTestRouter(t)
 

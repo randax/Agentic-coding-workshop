@@ -65,6 +65,7 @@ func NewRouter(
 	// (own-or-team) and role-gated edits.
 	accounts := r.Group("/accounts", requireAuth(identitySvc))
 	accounts.GET("", ch.list)
+	accounts.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), ch.create)
 	accounts.GET("/:id", ch.get)
 	accounts.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), ch.update)
 
@@ -72,12 +73,14 @@ func NewRouter(
 	accounts.GET("/:id/contacts", cth.listForAccount) // Account → Contacts subpanel
 	contactsGroup := r.Group("/contacts", requireAuth(identitySvc))
 	contactsGroup.GET("", cth.list)
+	contactsGroup.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), cth.create)
 	contactsGroup.GET("/:id", cth.get)
 	contactsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), cth.update)
 
 	lh := &leadHandler{svc: leads}
 	leadsGroup := r.Group("/leads", requireAuth(identitySvc))
 	leadsGroup.GET("", lh.list)
+	leadsGroup.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), lh.create)
 	leadsGroup.GET("/:id", lh.get)
 	leadsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), lh.update)
 	convH := &conversionHandler{svc: conversions}
@@ -92,6 +95,7 @@ func NewRouter(
 	oh := &opportunityHandler{svc: opportunities}
 	oppsGroup := r.Group("/opportunities", requireAuth(identitySvc))
 	oppsGroup.GET("", oh.list)
+	oppsGroup.POST("", requireRole(agent.RoleManager, agent.RoleAdmin), oh.create)
 	oppsGroup.GET("/pipeline", oh.pipeline) // before /:id so it isn't captured as an id
 	oppsGroup.GET("/:id", oh.get)
 	oppsGroup.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), oh.update)
@@ -220,6 +224,10 @@ func (h *customerHandler) create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
+	// On the authenticated /accounts surface, default the owner/team to the
+	// creator so they can see the record they just made. No-op on the legacy
+	// unauthenticated /customers route.
+	defaultOwner(c, &cust.AssignedUserID, &cust.TeamID)
 	created, err := h.svc.Create(c.Request.Context(), cust)
 	if err != nil {
 		if isValidationError(err) {

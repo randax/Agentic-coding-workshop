@@ -325,6 +325,24 @@ export async function getModuleRecord(
   return res.json() as Promise<ModuleRecord>;
 }
 
+/** Creates a new module record (`POST /{module}`) from the given field values.
+ * The backend assigns the id and defaults the owner to the signed-in user. */
+export async function createModuleRecord(
+  module: string,
+  values: ModuleRecord,
+): Promise<ModuleRecord> {
+  const res = await fetch(`${API_BASE_URL}/${module}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(values),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to create ${module} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleRecord>;
+}
+
 /** Updates a single module record (`PUT /{module}/{id}`) with the given field values. */
 export async function updateModuleRecord(
   module: string,

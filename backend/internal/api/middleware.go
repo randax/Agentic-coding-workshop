@@ -58,3 +58,21 @@ func currentUser(c *gin.Context) (agent.Agent, bool) {
 	u, ok := v.(agent.Agent)
 	return u, ok
 }
+
+// defaultOwner assigns a new record's owner and team to the signed-in user when
+// the caller left them unset, so the creator can see the record they just made
+// under own-or-team visibility. It is a no-op on unauthenticated routes and
+// never overrides an explicitly-provided owner/team.
+func defaultOwner(c *gin.Context, assignedUserID **uint, teamID **uint) {
+	user, ok := currentUser(c)
+	if !ok {
+		return
+	}
+	if *assignedUserID == nil {
+		id := user.ID
+		*assignedUserID = &id
+	}
+	if *teamID == nil {
+		*teamID = user.TeamID
+	}
+}
