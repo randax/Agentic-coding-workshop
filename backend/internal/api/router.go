@@ -18,6 +18,7 @@ import (
 	"saltcrm/internal/lead"
 	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
+	"saltcrm/internal/report"
 	"saltcrm/internal/studio"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -40,6 +41,7 @@ func NewRouter(
 	conversions *conversion.Service,
 	activities *activity.Service,
 	studioSvc *studio.Service,
+	reports *report.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -106,6 +108,14 @@ func NewRouter(
 
 	srch := &searchHandler{customers: customers, contacts: contacts, leads: leads, opportunities: opportunities, cases: cases}
 	r.GET("/search", requireAuth(identitySvc), srch.get)
+
+	rh := &reportHandler{reports: reports, customers: customers, contacts: contacts, leads: leads, opportunities: opportunities}
+	reportsGroup := r.Group("/reports", requireAuth(identitySvc))
+	reportsGroup.GET("", rh.list)
+	reportsGroup.POST("", rh.save)
+	reportsGroup.POST("/run", rh.run) // before /:id so "run" isn't captured as an id
+	reportsGroup.GET("/:id", rh.get)
+	reportsGroup.POST("/:id/run", rh.runSaved)
 
 	sth := &studioHandler{svc: studioSvc}
 	studioGroup := r.Group("/studio", requireAuth(identitySvc))

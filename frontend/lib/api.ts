@@ -761,3 +761,106 @@ export async function getCustomer(
   }
   return res.json() as Promise<Customer>;
 }
+
+// --- Reports --------------------------------------------------------------
+
+/** How a report rolls each group up. */
+export type ReportAggregation = "count" | "sum" | "avg";
+
+/** How a filter compares a field against its value. */
+export type ReportOperator = "eq" | "contains" | "gt" | "lt";
+
+/** One filter condition. `field` may name a core or custom field. */
+export interface ReportFilter {
+  field: string;
+  operator: ReportOperator;
+  value: string | number;
+}
+
+/** A report query: the module, conditions, grouping, and aggregation. */
+export interface ReportDefinition {
+  module: string;
+  filters?: ReportFilter[];
+  groupBy: string;
+  aggregation: ReportAggregation;
+  /** The field summed/averaged; ignored for `count`. */
+  aggField?: string;
+}
+
+/** One aggregated group of a report result. */
+export interface ReportRow {
+  group: string;
+  count: number;
+  value: number;
+}
+
+/** The aggregated rows a report run produces. */
+export interface ReportResult {
+  rows: ReportRow[];
+}
+
+/** A saved, re-runnable report. */
+export interface SavedReport {
+  id: number;
+  name: string;
+  definition: ReportDefinition;
+}
+
+/** Runs an ad-hoc report; results are scoped to what the signed-in user may see. */
+export async function runReport(
+  def: ReportDefinition,
+  cookie?: string,
+): Promise<ReportResult> {
+  const res = await fetch(`${API_BASE_URL}/reports/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
+    credentials: "include",
+    body: JSON.stringify(def),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to run report (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ReportResult>;
+}
+
+/** Saves a named report so it can be re-run later. */
+export async function saveReport(
+  name: string,
+  definition: ReportDefinition,
+): Promise<SavedReport> {
+  const res = await fetch(`${API_BASE_URL}/reports`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ name, definition }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to save report (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<SavedReport>;
+}
+
+/** Lists the saved reports. Always fresh. */
+export async function getSavedReports(cookie?: string): Promise<SavedReport[]> {
+  const res = await fetch(`${API_BASE_URL}/reports`, authGet(cookie));
+  if (!res.ok) {
+    throw new Error(`Failed to load saved reports (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<SavedReport[]>;
+}
+
+/** Re-runs a saved report by id; results are scoped to the signed-in user. */
+export async function runSavedReport(
+  id: number,
+  cookie?: string,
+): Promise<ReportResult> {
+  const res = await fetch(`${API_BASE_URL}/reports/${id}/run`, {
+    method: "POST",
+    credentials: "include",
+    headers: cookie ? { Cookie: cookie } : undefined,
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to run saved report (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ReportResult>;
+}
