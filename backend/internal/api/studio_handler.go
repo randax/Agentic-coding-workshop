@@ -44,3 +44,39 @@ func (h *studioHandler) addField(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, created)
 }
+
+func (h *studioHandler) listLayouts(c *gin.Context) {
+	layouts, err := h.svc.GetLayouts(c.Request.Context(), c.Query("module"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list layouts"})
+		return
+	}
+	if layouts == nil {
+		layouts = map[string][]string{}
+	}
+	c.JSON(http.StatusOK, layouts)
+}
+
+// saveLayouts upserts each provided view's layout for a module. The body is
+// {"module": "...", "views": {"list": [...], "detail": [...], "edit": [...]}}.
+func (h *studioHandler) saveLayouts(c *gin.Context) {
+	var body struct {
+		Module string              `json:"module"`
+		Views  map[string][]string `json:"views"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	for view, fields := range body.Views {
+		if err := h.svc.SetLayout(c.Request.Context(), body.Module, view, fields); err != nil {
+			if errors.Is(err, studio.ErrModuleRequired) || errors.Is(err, studio.ErrInvalidView) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save layout"})
+			return
+		}
+	}
+	c.Status(http.StatusNoContent)
+}

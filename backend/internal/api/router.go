@@ -105,6 +105,8 @@ func NewRouter(
 	studioGroup := r.Group("/studio", requireAuth(identitySvc))
 	studioGroup.GET("/fields", sth.listFields)
 	studioGroup.POST("/fields", requireRole(agent.RoleAdmin), sth.addField)
+	studioGroup.GET("/layouts", sth.listLayouts)
+	studioGroup.PUT("/layouts", requireRole(agent.RoleAdmin), sth.saveLayouts)
 
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)
