@@ -36,10 +36,21 @@ Use /tdd to complete the task.
 
 # FEEDBACK LOOPS
 
-Before committing, run the feedback loops:
+Before committing, run the feedback loops for whichever layer(s) you touched.
+This is a two-stack repo: a Go backend and a Next.js frontend. Most features
+touch the backend, so do not skip the Go loops.
 
-- `npm run test` to run the tests
+Backend (run from `backend/`):
+
+- `go build ./...` to confirm it compiles
+- `go test ./...` to run the tests
+
+Frontend (run from `frontend/`):
+
+- `npm test` to run the tests
 - `npm run typecheck` to run the type checker
+
+All feedback loops you ran must pass before you commit.
 
 # COMMIT
 
