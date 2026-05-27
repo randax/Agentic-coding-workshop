@@ -36,6 +36,12 @@ export default function RootLayout({
               Customers
             </Link>
             <Link
+              href="/m/accounts"
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              Accounts
+            </Link>
+            <Link
               href="/products"
               className="text-sm text-gray-600 hover:text-gray-900"
             >
