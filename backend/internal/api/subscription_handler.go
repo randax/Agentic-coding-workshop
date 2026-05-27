@@ -21,6 +21,19 @@ type assignRequest struct {
 	Quantity  int  `json:"quantity"`
 }
 
+// list serves all subscriptions (the generic /m/subscriptions module).
+func (h *subscriptionHandler) list(c *gin.Context) {
+	subs, err := h.svc.List(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list subscriptions"})
+		return
+	}
+	if subs == nil {
+		subs = []subscription.Subscription{}
+	}
+	c.JSON(http.StatusOK, subs)
+}
+
 func (h *subscriptionHandler) assign(c *gin.Context) {
 	custID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {

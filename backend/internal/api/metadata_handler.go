@@ -86,6 +86,15 @@ func defaultRegistry() *metadata.Registry {
 					{Name: "status", Type: metadata.FieldString, Label: "Status"},
 				},
 			},
+			{
+				Label: "Subscriptions",
+				Path:  "/customers/{id}/subscriptions",
+				Columns: []metadata.Field{
+					{Name: "status", Type: metadata.FieldString, Label: "Status"},
+					{Name: "quantity", Type: metadata.FieldString, Label: "Qty"},
+					{Name: "monthlyPriceSnapshot", Type: metadata.FieldCurrency, Label: "Monthly price"},
+				},
+			},
 		},
 	})
 	r.Register(metadata.ModuleMeta{
@@ -152,6 +161,21 @@ func defaultRegistry() *metadata.Registry {
 				},
 			},
 		},
+	})
+	r.Register(metadata.ModuleMeta{
+		Module:        "subscriptions",
+		Label:         "Subscriptions",
+		LabelSingular: "Subscription",
+		Fields: []metadata.Field{
+			{Name: "status", Type: metadata.FieldString, Label: "Status"},
+			{Name: "quantity", Type: metadata.FieldString, Label: "Qty"},
+			{Name: "monthlyPriceSnapshot", Type: metadata.FieldCurrency, Label: "Monthly price"},
+			{Name: "startDate", Type: metadata.FieldDate, Label: "Start"},
+		},
+		ListView: metadata.ListView{Columns: []string{"status", "quantity", "monthlyPriceSnapshot", "startDate"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Subscription", Fields: []string{"status", "quantity", "monthlyPriceSnapshot", "startDate"}},
+		}},
 	})
 	return r
 }

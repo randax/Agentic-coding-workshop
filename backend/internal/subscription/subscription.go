@@ -49,6 +49,7 @@ type Subscription struct {
 
 // Repository is the persistence seam the service depends on.
 type Repository interface {
+	List(ctx context.Context) ([]Subscription, error)
 	ListByCustomer(ctx context.Context, customerID uint) ([]Subscription, error)
 	Get(ctx context.Context, id uint) (Subscription, error)
 	Create(ctx context.Context, s *Subscription) error
@@ -123,4 +124,9 @@ func (s *Service) Cancel(ctx context.Context, id uint) (Subscription, error) {
 // ListForCustomer returns all subscriptions belonging to a customer.
 func (s *Service) ListForCustomer(ctx context.Context, customerID uint) ([]Subscription, error) {
 	return s.repo.ListByCustomer(ctx, customerID)
+}
+
+// List returns all subscriptions across customers.
+func (s *Service) List(ctx context.Context) ([]Subscription, error) {
+	return s.repo.List(ctx)
 }
