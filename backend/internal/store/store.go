@@ -9,6 +9,7 @@ import (
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
 	"saltcrm/internal/lead"
+	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -40,5 +41,6 @@ func Migrate(db *gorm.DB) error {
 		&identity.Session{},
 		&contact.Contact{},
 		&lead.Lead{},
+		&opportunity.Opportunity{},
 	)
 }

@@ -71,6 +71,18 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             Leads
           </Link>
           <Link
+            href="/m/opportunities"
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Opportunities
+          </Link>
+          <Link
+            href="/pipeline"
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Pipeline
+          </Link>
+          <Link
             href="/products"
             className="text-sm text-gray-600 hover:text-gray-900"
           >

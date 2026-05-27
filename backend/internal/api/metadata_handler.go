@@ -121,5 +121,22 @@ func defaultRegistry() *metadata.Registry {
 		}},
 		EditView: metadata.EditView{Fields: []string{"name", "company", "email", "phone", "status"}},
 	})
+	r.Register(metadata.ModuleMeta{
+		Module:        "opportunities",
+		Label:         "Opportunities",
+		LabelSingular: "Opportunity",
+		Fields: []metadata.Field{
+			{Name: "name", Type: metadata.FieldString, Label: "Name"},
+			{Name: "amount", Type: metadata.FieldCurrency, Label: "Amount"},
+			{Name: "stage", Type: metadata.FieldEnum, Label: "Stage", Options: []string{"prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"}},
+			{Name: "probability", Type: metadata.FieldString, Label: "Win %"},
+			{Name: "expectedCloseDate", Type: metadata.FieldDate, Label: "Expected close"},
+		},
+		ListView: metadata.ListView{Columns: []string{"name", "stage", "amount", "expectedCloseDate"}},
+		DetailView: metadata.DetailView{Panels: []metadata.Panel{
+			{Label: "Opportunity", Fields: []string{"name", "amount", "stage", "probability", "expectedCloseDate"}},
+		}},
+		EditView: metadata.EditView{Fields: []string{"name", "amount", "stage"}},
+	})
 	return r
 }

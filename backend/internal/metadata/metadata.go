@@ -18,6 +18,7 @@ const (
 	FieldEnum     FieldType = "enum"
 	FieldCurrency FieldType = "currency"
 	FieldBool     FieldType = "bool"
+	FieldDate     FieldType = "date"
 )
 
 // Field describes a single field on a module.
