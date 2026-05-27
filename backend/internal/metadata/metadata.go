@@ -27,6 +27,7 @@ type Field struct {
 	Type    FieldType `json:"type"`
 	Label   string    `json:"label"`
 	Options []string  `json:"options,omitempty"` // for FieldEnum
+	Custom  bool      `json:"custom,omitempty"`  // runtime-defined (Studio) field
 }
 
 // ListView is the column layout of a module's list view.

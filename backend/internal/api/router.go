@@ -18,6 +18,7 @@ import (
 	"saltcrm/internal/lead"
 	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
+	"saltcrm/internal/studio"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
 
@@ -38,6 +39,7 @@ func NewRouter(
 	lineItems *opportunity.LineItemService,
 	conversions *conversion.Service,
 	activities *activity.Service,
+	studioSvc *studio.Service,
 ) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -96,8 +98,13 @@ func NewRouter(
 	oppsGroup.GET("/:id/line-items", liH.list)
 	oppsGroup.POST("/:id/line-items", requireRole(agent.RoleManager, agent.RoleAdmin), liH.add)
 
-	mh := &metadataHandler{reg: defaultRegistry()}
+	mh := &metadataHandler{reg: defaultRegistry(), studio: studioSvc}
 	r.GET("/metadata/:module", mh.get)
+
+	sth := &studioHandler{svc: studioSvc}
+	studioGroup := r.Group("/studio", requireAuth(identitySvc))
+	studioGroup.GET("/fields", sth.listFields)
+	studioGroup.POST("/fields", requireRole(agent.RoleAdmin), sth.addField)
 
 	ph := &productHandler{svc: products}
 	r.GET("/products", ph.list)

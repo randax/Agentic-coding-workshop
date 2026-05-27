@@ -12,6 +12,7 @@ import (
 	"saltcrm/internal/lead"
 	"saltcrm/internal/opportunity"
 	"saltcrm/internal/product"
+	"saltcrm/internal/studio"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
 	"saltcrm/internal/team"
@@ -45,5 +46,6 @@ func Migrate(db *gorm.DB) error {
 		&opportunity.Opportunity{},
 		&opportunity.LineItem{},
 		&activity.Activity{},
+		&studio.FieldDef{},
 	)
 }

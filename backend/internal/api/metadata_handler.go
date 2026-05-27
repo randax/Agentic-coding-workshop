@@ -5,16 +5,19 @@ import (
 	"net/http"
 
 	"saltcrm/internal/metadata"
+	"saltcrm/internal/studio"
 
 	"github.com/gin-gonic/gin"
 )
 
 type metadataHandler struct {
-	reg *metadata.Registry
+	reg    *metadata.Registry
+	studio *studio.Service
 }
 
 func (h *metadataHandler) get(c *gin.Context) {
-	m, err := h.reg.Get(c.Param("module"))
+	module := c.Param("module")
+	m, err := h.reg.Get(module)
 	if err != nil {
 		if errors.Is(err, metadata.ErrUnknownModule) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "unknown module"})
@@ -23,7 +26,30 @@ func (h *metadataHandler) get(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load module metadata"})
 		return
 	}
+	h.mergeCustomFields(c, module, &m)
 	c.JSON(http.StatusOK, m)
+}
+
+// mergeCustomFields appends a module's runtime custom fields (from Studio) onto
+// its code-defined metadata, so the generic views render and edit them.
+func (h *metadataHandler) mergeCustomFields(c *gin.Context, module string, m *metadata.ModuleMeta) {
+	if h.studio == nil {
+		return
+	}
+	defs, err := h.studio.ListByModule(c.Request.Context(), module)
+	if err != nil || len(defs) == 0 {
+		return
+	}
+	var names []string
+	for _, d := range defs {
+		m.Fields = append(m.Fields, metadata.Field{
+			Name: d.Name, Type: metadata.FieldType(d.Type), Label: d.Label, Options: d.Options, Custom: true,
+		})
+		m.ListView.Columns = append(m.ListView.Columns, d.Name)
+		m.EditView.Fields = append(m.EditView.Fields, d.Name)
+		names = append(names, d.Name)
+	}
+	m.DetailView.Panels = append(m.DetailView.Panels, metadata.Panel{Label: "Custom fields", Fields: names})
 }
 
 // defaultRegistry registers the metadata for every module the generic views can

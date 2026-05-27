@@ -5,6 +5,7 @@ package customer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -57,6 +58,69 @@ type Customer struct {
 	// Ownership for record-level visibility (own-or-team). Nullable.
 	AssignedUserID *uint `json:"assignedUserId,omitempty"`
 	TeamID         *uint `json:"teamId,omitempty"`
+
+	// CustomFields holds runtime-defined (Studio) field values. It is flattened
+	// to the top level in JSON (see MarshalJSON) so the generic views render it
+	// like any other field, and unknown keys on input are captured into it.
+	CustomFields map[string]any `gorm:"serializer:json" json:"-"`
+}
+
+// knownCustomerFields are the JSON keys that map to real struct fields; anything
+// else on input is a custom field value.
+var knownCustomerFields = map[string]bool{
+	"id": true, "name": true, "email": true, "phone": true, "serviceAddress": true,
+	"accountNumber": true, "customerSince": true, "status": true,
+	"assignedUserId": true, "teamId": true,
+}
+
+// MarshalJSON flattens CustomFields to the top level alongside the struct fields.
+func (c Customer) MarshalJSON() ([]byte, error) {
+	type alias Customer
+	b, err := json.Marshal(alias(c))
+	if err != nil {
+		return nil, err
+	}
+	if len(c.CustomFields) == 0 {
+		return b, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	for k, v := range c.CustomFields {
+		m[k] = v
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON populates the struct fields and captures any unknown top-level
+// keys into CustomFields (so custom field values sent by the generic edit form
+// are routed to the JSON column).
+func (c *Customer) UnmarshalJSON(b []byte) error {
+	type alias Customer
+	var a alias
+	if err := json.Unmarshal(b, &a); err != nil {
+		return err
+	}
+	*c = Customer(a)
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(b, &all); err != nil {
+		return err
+	}
+	for k, raw := range all {
+		if knownCustomerFields[k] {
+			continue
+		}
+		if c.CustomFields == nil {
+			c.CustomFields = map[string]any{}
+		}
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return err
+		}
+		c.CustomFields[k] = v
+	}
+	return nil
 }
 
 // Repository is the persistence seam the service depends on. The real
@@ -178,6 +242,9 @@ func (s *Service) Update(ctx context.Context, c Customer) (Customer, error) {
 	existing.Status = c.Status
 	existing.AssignedUserID = c.AssignedUserID // owner reassignment
 	existing.TeamID = c.TeamID
+	if c.CustomFields != nil {
+		existing.CustomFields = c.CustomFields
+	}
 	if err := existing.validate(); err != nil {
 		return Customer{}, err
 	}
