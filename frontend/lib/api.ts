@@ -172,6 +172,49 @@ export async function unretireProduct(id: string | number): Promise<void> {
   }
 }
 
+// --- Generic module metadata (drives the metadata-rendered views under /m) ---
+
+export type FieldType = "string" | "enum" | "currency" | "bool";
+
+export interface FieldMeta {
+  name: string;
+  type: FieldType;
+  label: string;
+  /** Present for `enum` fields. */
+  options?: string[];
+}
+
+export interface ModuleMeta {
+  module: string;
+  label: string;
+  labelSingular: string;
+  fields: FieldMeta[];
+  listView: { columns: string[] };
+}
+
+/** A module record is an open bag of fields; the metadata says how to render them. */
+export type ModuleRecord = Record<string, unknown>;
+
+/** Fetches a module's metadata (fields + view layouts). Always fresh (uncached). */
+export async function getModuleMeta(module: string): Promise<ModuleMeta> {
+  const res = await fetch(`${API_BASE_URL}/metadata/${module}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load metadata for ${module} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleMeta>;
+}
+
+/** Fetches a module's records from its list endpoint (`/{module}`). Always fresh. */
+export async function getModuleRecords(module: string): Promise<ModuleRecord[]> {
+  const res = await fetch(`${API_BASE_URL}/${module}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Failed to load ${module} (HTTP ${res.status})`);
+  }
+  return res.json() as Promise<ModuleRecord[]>;
+}
+
 /** Fetches the product catalog. Data is always fresh (uncached). */
 export async function getProducts(): Promise<Product[]> {
   const res = await fetch(`${API_BASE_URL}/products`, { cache: "no-store" });
