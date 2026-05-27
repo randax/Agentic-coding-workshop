@@ -59,6 +59,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
             Accounts
           </Link>
           <Link
+            href="/m/contacts"
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Contacts
+          </Link>
+          <Link
             href="/products"
             className="text-sm text-gray-600 hover:text-gray-900"
           >
