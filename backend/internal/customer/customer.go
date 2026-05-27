@@ -53,6 +53,10 @@ type Customer struct {
 	AccountNumber  string    `gorm:"uniqueIndex" json:"accountNumber"`
 	CustomerSince  time.Time `json:"customerSince"`
 	Status         Status    `json:"status"`
+
+	// Ownership for record-level visibility (own-or-team). Nullable.
+	AssignedUserID *uint `json:"assignedUserId,omitempty"`
+	TeamID         *uint `json:"teamId,omitempty"`
 }
 
 // Repository is the persistence seam the service depends on. The real
@@ -172,6 +176,8 @@ func (s *Service) Update(ctx context.Context, c Customer) (Customer, error) {
 	existing.ServiceAddress = c.ServiceAddress
 	existing.AccountNumber = c.AccountNumber
 	existing.Status = c.Status
+	existing.AssignedUserID = c.AssignedUserID // owner reassignment
+	existing.TeamID = c.TeamID
 	if err := existing.validate(); err != nil {
 		return Customer{}, err
 	}

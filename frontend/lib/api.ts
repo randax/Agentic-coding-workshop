@@ -265,11 +265,21 @@ export interface ModuleMeta {
 /** A module record is an open bag of fields; the metadata says how to render them. */
 export type ModuleRecord = Record<string, unknown>;
 
+// Authenticated GET options. The session cookie is sent automatically in the
+// browser via credentials:"include"; in server components there is no ambient
+// cookie, so callers forward it explicitly as `cookie`.
+function authGet(cookie?: string): RequestInit {
+  const init: RequestInit = { cache: "no-store", credentials: "include" };
+  if (cookie) init.headers = { Cookie: cookie };
+  return init;
+}
+
 /** Fetches a module's metadata (fields + view layouts). Always fresh (uncached). */
-export async function getModuleMeta(module: string): Promise<ModuleMeta> {
-  const res = await fetch(`${API_BASE_URL}/metadata/${module}`, {
-    cache: "no-store",
-  });
+export async function getModuleMeta(
+  module: string,
+  cookie?: string,
+): Promise<ModuleMeta> {
+  const res = await fetch(`${API_BASE_URL}/metadata/${module}`, authGet(cookie));
   if (!res.ok) {
     throw new Error(`Failed to load metadata for ${module} (HTTP ${res.status})`);
   }
@@ -277,8 +287,11 @@ export async function getModuleMeta(module: string): Promise<ModuleMeta> {
 }
 
 /** Fetches a module's records from its list endpoint (`/{module}`). Always fresh. */
-export async function getModuleRecords(module: string): Promise<ModuleRecord[]> {
-  const res = await fetch(`${API_BASE_URL}/${module}`, { cache: "no-store" });
+export async function getModuleRecords(
+  module: string,
+  cookie?: string,
+): Promise<ModuleRecord[]> {
+  const res = await fetch(`${API_BASE_URL}/${module}`, authGet(cookie));
   if (!res.ok) {
     throw new Error(`Failed to load ${module} (HTTP ${res.status})`);
   }
@@ -289,10 +302,9 @@ export async function getModuleRecords(module: string): Promise<ModuleRecord[]> 
 export async function getModuleRecord(
   module: string,
   id: string | number,
+  cookie?: string,
 ): Promise<ModuleRecord | null> {
-  const res = await fetch(`${API_BASE_URL}/${module}/${id}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(`${API_BASE_URL}/${module}/${id}`, authGet(cookie));
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`Failed to load ${module}/${id} (HTTP ${res.status})`);
@@ -309,6 +321,7 @@ export async function updateModuleRecord(
   const res = await fetch(`${API_BASE_URL}/${module}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(values),
   });
   if (!res.ok) {
@@ -321,9 +334,10 @@ export async function updateModuleRecord(
 export async function getSubpanelRecords(
   path: string,
   parentId: string | number,
+  cookie?: string,
 ): Promise<ModuleRecord[]> {
   const url = `${API_BASE_URL}${path.replace("{id}", String(parentId))}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, authGet(cookie));
   if (!res.ok) {
     throw new Error(`Failed to load related records (HTTP ${res.status})`);
   }

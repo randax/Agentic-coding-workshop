@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"saltcrm/internal/access"
 	"saltcrm/internal/agent"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
@@ -44,10 +45,13 @@ func NewRouter(
 	r.PUT("/customers/:id", ch.update)
 
 	// "Accounts" is the SaltCRM-facing name for customers; the generic /m/accounts
-	// views read records here. Legacy /customers routes above stay for now.
-	r.GET("/accounts", ch.list)
-	r.GET("/accounts/:id", ch.get)
-	r.PUT("/accounts/:id", ch.update)
+	// views read records here. Unlike the legacy /customers routes above, the
+	// accounts surface requires authentication and enforces record visibility
+	// (own-or-team) and role-gated edits.
+	accounts := r.Group("/accounts", requireAuth(identitySvc))
+	accounts.GET("", ch.list)
+	accounts.GET("/:id", ch.get)
+	accounts.PUT("/:id", requireRole(agent.RoleManager, agent.RoleAdmin), ch.update)
 
 	mh := &metadataHandler{reg: defaultRegistry()}
 	r.GET("/metadata/:module", mh.get)
@@ -113,6 +117,17 @@ func (h *customerHandler) list(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list customers"})
 		return
+	}
+	// On authenticated surfaces (accounts), restrict to records the user may see
+	// (own-or-team; admins see all). Public legacy routes have no user and skip this.
+	if user, ok := currentUser(c); ok {
+		visible := customers[:0]
+		for _, cust := range customers {
+			if access.Visible(user, cust.AssignedUserID, cust.TeamID) {
+				visible = append(visible, cust)
+			}
+		}
+		customers = visible
 	}
 	// Always serialize as a JSON array, never null, even when empty.
 	if customers == nil {

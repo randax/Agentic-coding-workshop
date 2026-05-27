@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import {
   getModuleMeta,
@@ -16,6 +17,7 @@ export default async function ModuleRecordPage({
   params: Promise<{ module: string; id: string }>;
 }) {
   const { module, id } = await params;
+  const cookie = (await cookies()).toString();
 
   let meta: ModuleMeta;
   let record: ModuleRecord | null;
@@ -23,14 +25,14 @@ export default async function ModuleRecordPage({
 
   try {
     [meta, record] = await Promise.all([
-      getModuleMeta(module),
-      getModuleRecord(module, id),
+      getModuleMeta(module, cookie),
+      getModuleRecord(module, id, cookie),
     ]);
     if (record === null) notFound();
     subpanels = await Promise.all(
       (meta.subpanels ?? []).map(async (sp) => ({
         meta: sp,
-        records: await getSubpanelRecords(sp.path, id),
+        records: await getSubpanelRecords(sp.path, id, cookie),
       })),
     );
   } catch (e) {

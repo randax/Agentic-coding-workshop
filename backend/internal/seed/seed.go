@@ -23,6 +23,10 @@ import (
 // Demo seeds demo data. Each entity is seeded independently and only when its
 // table is empty, so Demo is safe to run on every startup.
 func Demo(db *gorm.DB) error {
+	// Agents (and their team) first, so customers can be assigned to the team.
+	if err := seedAgents(db); err != nil {
+		return err
+	}
 	if err := seedCustomers(db); err != nil {
 		return err
 	}
@@ -30,9 +34,6 @@ func Demo(db *gorm.DB) error {
 		return err
 	}
 	if err := seedSubscriptions(db); err != nil {
-		return err
-	}
-	if err := seedAgents(db); err != nil {
 		return err
 	}
 	if err := seedCases(db); err != nil {
@@ -237,6 +238,13 @@ func seedCustomers(db *gorm.DB) error {
 		{"Vint Cerf", "Prinsens gate 6, 4005 Stavanger", customer.StatusActive},
 	}
 
+	// Assign all demo accounts to the seeded team and round-robin an owner among
+	// the agents, so logged-in demo users see them (own-or-team visibility).
+	var supportTeam team.Team
+	db.First(&supportTeam)
+	var agents []agent.Agent
+	db.Order("id").Find(&agents)
+
 	base := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
 	customers := make([]customer.Customer, len(specs))
 	for i, s := range specs {
@@ -249,6 +257,12 @@ func seedCustomers(db *gorm.DB) error {
 			AccountNumber:  fmt.Sprintf("ISP-%04d", 1001+i),
 			CustomerSince:  base.AddDate(0, i*2, i),
 			Status:         s.status,
+		}
+		if supportTeam.ID != 0 {
+			customers[i].TeamID = &supportTeam.ID
+		}
+		if len(agents) > 0 {
+			customers[i].AssignedUserID = &agents[i%len(agents)].ID
 		}
 	}
 	return db.Create(&customers).Error
