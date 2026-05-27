@@ -13,6 +13,7 @@ import (
 	"saltcrm/internal/contact"
 	"saltcrm/internal/customer"
 	"saltcrm/internal/identity"
+	"saltcrm/internal/lead"
 	"saltcrm/internal/product"
 	"saltcrm/internal/subscription"
 	"saltcrm/internal/supportcase"
@@ -32,6 +33,9 @@ func Demo(db *gorm.DB) error {
 		return err
 	}
 	if err := seedContacts(db); err != nil {
+		return err
+	}
+	if err := seedLeads(db); err != nil {
 		return err
 	}
 	if err := seedProducts(db); err != nil {
@@ -304,6 +308,31 @@ func seedContacts(db *gorm.DB) error {
 		return nil
 	}
 	return db.Create(&contacts).Error
+}
+
+func seedLeads(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&lead.Lead{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+
+	var supportTeam team.Team
+	db.First(&supportTeam)
+	var teamID *uint
+	if supportTeam.ID != 0 {
+		teamID = &supportTeam.ID
+	}
+
+	leads := []lead.Lead{
+		{Name: "Priya Patel", Company: "Fjord Logistics", Email: "priya@fjordlog.example", Phone: "+47 901 11 222", Status: lead.StatusNew, TeamID: teamID},
+		{Name: "Marco Rossi", Company: "Nordlys Media", Email: "marco@nordlys.example", Phone: "+47 902 33 444", Status: lead.StatusWorking, TeamID: teamID},
+		{Name: "Sofia Berg", Company: "Polar Foods", Email: "sofia@polarfoods.example", Phone: "+47 903 55 666", Status: lead.StatusQualified, TeamID: teamID},
+		{Name: "Jonas Vik", Company: "Byfjord Eiendom", Email: "jonas@byfjord.example", Phone: "+47 904 77 888", Status: lead.StatusUnqualified, TeamID: teamID},
+	}
+	return db.Create(&leads).Error
 }
 
 func seedProducts(db *gorm.DB) error {
